@@ -1,0 +1,1 @@
+ALTER TABLE `payment_submissions` ADD `memo` varchar(256);

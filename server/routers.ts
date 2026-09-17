@@ -69,10 +69,20 @@ export const appRouter = router({
   }),
   payment: router({
     submitTxid: publicProcedure
-      .input(z.object({ amount: z.string().regex(/^\d+(\.\d{1,8})?$/).max(64), currency: z.string().min(2).max(64), txid: z.string().min(8).max(256) }))
+      .input(z.object({ amount: z.string().regex(/^\d+(\.\d{1,8})?$/).max(64), currency: z.string().min(2).max(64), txid: z.string().min(8).max(256), memo: z.string().max(256).optional() }))
       .mutation(async ({ input }) => {
-        await createPaymentSubmission({ amount: input.amount, currency: input.currency, txid: input.txid, status: "pending" });
+        if ((input.currency === "TON" || input.currency === "Xrp") && !input.memo?.trim()) {
+          throw new Error(`Memo برای ${input.currency} الزامی است.`);
+        }
+        await createPaymentSubmission({ amount: input.amount, currency: input.currency, txid: input.txid, memo: input.memo?.trim() || null, status: "pending" });
         return { submitted: true, status: "pending" as const };
+      }),
+    prices: publicProcedure
+      .input(z.object({ ids: z.array(z.string().min(1).max(40)).min(1).max(20) }))
+      .query(async ({ input }) => {
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(input.ids.join(","))}&vs_currencies=usd`);
+        if (!response.ok) throw new Error("قیمت لحظه‌ای در دسترس نیست.");
+        return (await response.json()) as Record<string, { usd?: number }>;
       }),
   }),
   manika: router({

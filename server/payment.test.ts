@@ -31,4 +31,20 @@ describe("payment.submitTxid", () => {
       txid: "txid-example-12345678",
     })).rejects.toThrow();
   });
+
+  it("requires a memo for TON and XRP payments", async () => {
+    const caller = appRouter.createCaller(context);
+
+    await expect(caller.payment.submitTxid({
+      amount: "20",
+      currency: "TON",
+      txid: "ton-txid-example-123",
+    })).rejects.toThrow("Memo");
+
+    await expect(caller.payment.submitTxid({
+      amount: "20",
+      currency: "Xrp",
+      txid: "xrp-txid-example-123",
+    })).rejects.toThrow("Memo");
+  });
 });

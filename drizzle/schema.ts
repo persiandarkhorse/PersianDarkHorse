@@ -30,6 +30,7 @@ export const paymentSubmissions = mysqlTable("payment_submissions", {
   amount: varchar("amount", { length: 64 }).notNull(),
   currency: varchar("currency", { length: 64 }).notNull(),
   txid: varchar("txid", { length: 256 }).notNull().unique(),
+  memo: varchar("memo", { length: 256 }),
   status: mysqlEnum("status", ["pending", "verified", "rejected"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
