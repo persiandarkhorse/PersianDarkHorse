@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Streamdown } from "streamdown";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +9,7 @@ import {
   Camera,
   Check,
   ChevronDown,
+  Coins,
   Copy,
   Image as ImageIcon,
   Menu,
@@ -194,6 +196,8 @@ export default function Home() {
               })}
             </div>
           </div>
+
+          <Link href="/subscription" className="mt-5 flex items-center justify-between rounded-2xl border border-[#d9c0ae] bg-[#fffaf6] px-4 py-3 text-sm font-semibold text-[#79533f] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"><span className="flex items-center gap-2"><Coins size={16} /> خرید اشتراک</span><span className="text-[10px] font-normal text-[#ae8d79]">به‌زودی</span></Link>
 
           <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-[#e7dcd4] bg-white/70 p-4">
             <div className="flex items-center gap-2 text-[#886d5c]"><Sparkles size={15} /><span className="text-xs font-semibold">هویت مانیکا فعال است</span></div>
