@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { invokeLLMMock, generateImageMock } = vi.hoisted(() => ({
+const { invokeLLMMock, generateImageMock, storagePutMock } = vi.hoisted(() => ({
   invokeLLMMock: vi.fn(),
   generateImageMock: vi.fn(),
+  storagePutMock: vi.fn(),
 }));
 
 vi.mock("./_core/llm", () => ({
@@ -11,6 +12,10 @@ vi.mock("./_core/llm", () => ({
 
 vi.mock("./_core/imageGeneration", () => ({
   generateImage: generateImageMock,
+}));
+
+vi.mock("./storage", () => ({
+  storagePut: storagePutMock,
 }));
 
 import { appRouter } from "./routers";
@@ -28,10 +33,12 @@ describe("manika.chat", () => {
   beforeEach(() => {
     invokeLLMMock.mockReset();
     generateImageMock.mockReset();
+    storagePutMock.mockReset();
     invokeLLMMock.mockResolvedValue({
       choices: [{ message: { content: "سلام، من مانیکا هستم." } }],
     });
     generateImageMock.mockResolvedValue({ url: "/manus-storage/generated.png" });
+    storagePutMock.mockResolvedValue({ key: "chat-uploads/file.txt", url: "/manus-storage/chat-uploads/file.txt" });
   });
 
   it("returns the model response for a valid conversation", async () => {
@@ -87,5 +94,17 @@ describe("manika.chat", () => {
 
     expect(generateImageMock.mock.calls[0]?.[0].originalImages).toBeUndefined();
     expect(generateImageMock.mock.calls[0]?.[0].prompt).not.toContain("Manika's exact established face");
+  });
+
+  it("uploads a chat file to project storage", async () => {
+    const caller = appRouter.createCaller(createContext());
+    const result = await caller.manika.uploadFile({
+      fileName: "notes.txt",
+      contentType: "text/plain",
+      dataBase64: Buffer.from("hello").toString("base64"),
+    });
+
+    expect(result).toMatchObject({ fileName: "notes.txt", contentType: "text/plain", size: 5 });
+    expect(storagePutMock).toHaveBeenCalledOnce();
   });
 });

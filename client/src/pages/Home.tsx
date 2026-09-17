@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -18,6 +18,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Paperclip,
+  FileText,
   Plus,
   Sparkles,
   Send,
@@ -28,7 +29,8 @@ import {
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 
 type Role = "user" | "assistant";
-type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string };
+type Attachment = { fileName: string; contentType: string; size: number; url: string };
+type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string; attachment?: Attachment };
 
 type Mode = {
   label: string;
@@ -82,30 +84,67 @@ export default function Home() {
   const [imageMode, setImageMode] = useState<"generate" | "edit">("generate");
   const [imageType, setImageType] = useState<"general" | "manika">("manika");
   const [imagePrompt, setImagePrompt] = useState("");
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const chatMutation = trpc.manika.chat.useMutation();
   const imageMutation = trpc.manika.image.useMutation();
+  const uploadMutation = trpc.manika.uploadFile.useMutation();
 
   useEffect(() => {
     localStorage.setItem("manika-chat-history", JSON.stringify(messages));
   }, [messages]);
 
-  const canSend = input.trim().length > 0 && !chatMutation.isPending;
+  const canSend = (input.trim().length > 0 || Boolean(attachment)) && !chatMutation.isPending && !uploadMutation.isPending;
   const canGenerateImage = imagePrompt.trim().length > 2 && !imageMutation.isPending;
   const messageCount = useMemo(() => messages.filter((item) => item.role === "user").length, [messages]);
 
+  async function uploadFile(file: File) {
+    setUploadError(null);
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError("حجم فایل باید حداکثر ۱۵ مگابایت باشد.");
+      return;
+    }
+    if (!file.type || (!file.type.startsWith("image/") && !file.type.startsWith("application/") && !file.type.startsWith("text/"))) {
+      setUploadError("این نوع فایل پشتیبانی نمی‌شود.");
+      return;
+    }
+    const dataBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+      reader.onerror = () => reject(new Error("خواندن فایل ناموفق بود."));
+      reader.readAsDataURL(file);
+    });
+    try {
+      const result = await uploadMutation.mutateAsync({ fileName: file.name, contentType: file.type, dataBase64 });
+      setAttachment(result);
+    } catch {
+      setUploadError("آپلود فایل انجام نشد. لطفاً دوباره امتحان کنید.");
+    }
+  }
+
+  function handleFiles(files: FileList | null) {
+    const file = files?.[0];
+    if (file) void uploadFile(file);
+  }
+
   async function sendMessage(value = input) {
     const text = value.trim();
-    if (!text || chatMutation.isPending) return;
+    if ((!text && !attachment) || chatMutation.isPending) return;
+    const promptText = attachment ? `${text || "این فایل را بررسی کن."}\n\nفایل پیوست‌شده: ${attachment.fileName}\nلینک فایل: ${window.location.origin}${attachment.url}` : text;
 
     const userMessage: ChatMessage = {
       id: makeId(),
       role: "user",
-      content: text,
+      content: promptText,
+      attachment: attachment ?? undefined,
       createdAt: Date.now(),
     };
     const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
     setInput("");
+    setAttachment(null);
 
     try {
       const result = await chatMutation.mutateAsync({
@@ -241,8 +280,9 @@ export default function Home() {
                   {message.role === "assistant" ? <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e5e5e5] text-[#222222]"><Sparkles size={15} /></div> : <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#39312e] text-[11px] font-semibold text-white">شما</div>}
                   <div className={`min-w-0 max-w-[85%] ${message.role === "user" ? "text-left" : ""}`}>
                     <div className={`rounded-[20px] px-4 py-3.5 text-[14px] leading-7 ${message.role === "user" ? "rounded-tr-md bg-[#39312e] text-white" : "rounded-tl-md bg-[#f3f3f3] text-[#222222]"}`} dir="auto">
-                      {message.role === "assistant" ? <Streamdown>{message.content}</Streamdown> : <p className="whitespace-pre-wrap">{message.content}</p>}
+                      {message.role === "assistant" ? <Streamdown>{message.content}</Streamdown> : <p className="whitespace-pre-wrap">{message.content.replace(/\n\nفایل پیوست‌شده:[\s\S]*$/, "")}</p>}
                     </div>
+                    {message.attachment && <a href={message.attachment.url} target="_blank" rel="noreferrer" className="mt-2 flex items-center gap-3 rounded-2xl border border-[#e4e4e4] bg-white px-3 py-2 text-xs text-[#333333] hover:border-[#999999]"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f1f1f1]">{message.attachment.contentType.startsWith("image/") ? <img src={message.attachment.url} alt="" className="h-8 w-8 rounded-xl object-cover" /> : <FileText size={16} />}</span><span className="min-w-0 truncate">{message.attachment.fileName}</span></a>}
                     {message.imageUrl && <div className="mt-3 overflow-hidden rounded-[20px] border border-[#e7d9d0] bg-white shadow-sm"><img src={message.imageUrl} alt="تصویر تولیدشده از مانیکا" className="max-h-[560px] w-full object-cover" /><div className="flex items-center justify-between px-3 py-2 text-[11px] text-[#666666]"><span>تصویر تولیدشده با هویت بصری مانیکا</span><a href={message.imageUrl} target="_blank" rel="noreferrer" className="font-medium text-[#222222] hover:underline">باز کردن تصویر</a></div></div>}
                     {message.role === "assistant" && message.id !== "welcome" && <div className="mt-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100"><button onClick={() => copyMessage(message)} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="کپی"><span className="sr-only">کپی</span>{copiedId === message.id ? <Check size={14} /> : <Copy size={14} />}</button></div>}
                   </div>
@@ -257,9 +297,11 @@ export default function Home() {
           <div className="px-5 pb-5 pt-2 md:px-12 lg:px-20">
             <div className="mx-auto max-w-3xl">
               {imagePanelOpen && <div className="mb-3 rounded-[22px] border border-[#e5e5e5] bg-[#fffdfb] p-4 shadow-[0_8px_24px_rgba(91,62,46,0.06)]"><div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold text-[#4a3b34]">استودیوی تصویر</p><p className="mt-1 text-[11px] text-[#777777]">حالت ساخت را انتخاب کنید و توصیف صحنه را بنویسید.</p></div><button onClick={() => setImagePanelOpen(false)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5]" aria-label="بستن استودیو"><X size={16} /></button></div><div className="mb-3 grid grid-cols-2 gap-2"><button onClick={() => { setImageType("general"); setImageMode("generate"); }} className={`rounded-xl px-3 py-2 text-xs ${imageType === "general" ? "bg-[#000000] text-white" : "bg-[#f1f1f1] text-[#555555]"}`}>ساخت تصویر کلی</button><button onClick={() => setImageType("manika")} className={`rounded-xl px-3 py-2 text-xs ${imageType === "manika" ? "bg-[#000000] text-white" : "bg-[#f1f1f1] text-[#555555]"}`}>ساخت مخصوص مانیکا</button></div>{imageType === "manika" && <div className="mb-3 flex gap-2"><button onClick={() => setImageMode("generate")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "generate" ? "bg-[#e5e5e5] text-[#111111]" : "bg-[#f1f1f1] text-[#666666]"}`}>تولید تصویر مانیکا</button><button onClick={() => setImageMode("edit")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "edit" ? "bg-[#e5e5e5] text-[#111111]" : "bg-[#f1f1f1] text-[#666666]"}`}>ویرایش پرتره رسمی</button></div>}<Textarea value={imagePrompt} onChange={(event) => setImagePrompt(event.target.value)} placeholder={imageType === "general" ? "مثلاً: یک منظرهٔ سینمایی از تهران در شب..." : imageMode === "edit" ? "مثلاً: پس‌زمینه را به یک کافهٔ پاریسی در ساعت طلایی تبدیل کن..." : "مثلاً: مانیکا در یک گالری هنری مدرن، کت مشکی و نور پنجره..."} className="min-h-[82px] resize-none rounded-2xl border-[#e5e5e5] bg-white text-sm leading-6" dir="rtl" /><div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-[#777777]">تولید تصویر ممکن است چند ثانیه زمان ببرد.</span><Button onClick={generateManikaImage} disabled={!canGenerateImage} className="rounded-xl bg-[#000000] text-white hover:bg-[#222222] disabled:bg-[#e5e5e5]"><Sparkles size={15} className="ml-2" />{imageMutation.isPending ? "در حال ساخت..." : imageType === "general" ? "ساخت تصویر کلی" : imageMode === "edit" ? "ویرایش تصویر مانیکا" : "ساخت تصویر مانیکا"}</Button></div></div>}
-              <div className="rounded-[24px] border border-[#e5e5e5] bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] focus-within:border-[#888888] focus-within:ring-4 focus-within:ring-[#dddddd]/40">
+              {uploadError && <div className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{uploadError}</div>}
+              {attachment && <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-xs"><span className="flex min-w-0 items-center gap-2"><FileText size={15} /><span className="truncate">{attachment.fileName}</span></span><button onClick={() => setAttachment(null)} className="rounded-lg p-1 text-[#777777] hover:bg-[#f2f2f2]" aria-label="حذف فایل پیوست"><X size={15} /></button></div>}
+              <div onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }} onDragLeave={() => setIsDraggingFile(false)} onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); handleFiles(event.dataTransfer.files); }} className={`rounded-[24px] border bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] transition focus-within:ring-4 focus-within:ring-[#dddddd]/40 ${isDraggingFile ? "border-[#111111] bg-[#fafafa] ring-4 ring-[#dddddd]" : "border-[#e5e5e5] focus-within:border-[#888888]"}`}>
                 <Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="پیامت را برای مانیکا بنویس..." className="min-h-[54px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 shadow-none focus-visible:ring-0" dir="auto" />
-                <div className="flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#777777]"><button className="rounded-xl p-2 hover:bg-[#f5efeb]" title="پیوست"><Paperclip size={17} /></button><button onClick={() => setImagePanelOpen((open) => !open)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${imagePanelOpen ? "bg-[#eeeeee] text-[#222222]" : ""}`} title="تولید یا ویرایش تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#999999] sm:block">{messageCount} پیام در این گفت‌وگو</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]"><ArrowUp size={17} /></Button></div>
+                <div className="flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#777777]"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.json" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${isDraggingFile ? "bg-[#eeeeee]" : ""}`} title="پیوست یا رها کردن فایل" aria-label="پیوست یا رها کردن فایل"><Paperclip size={17} /></button><button onClick={() => setImagePanelOpen((open) => !open)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${imagePanelOpen ? "bg-[#eeeeee] text-[#222222]" : ""}`} title="تولید یا ویرایش تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#999999] sm:block">{isDraggingFile ? "فایل را رها کنید" : `${messageCount} پیام در این گفت‌وگو · تصویر یا سند را اینجا رها کنید`}</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]"><ArrowUp size={17} /></Button></div>
               </div>
               <p className="mt-3 text-center text-[10px] text-[#999999]">مانیکا ممکن است اشتباه کند؛ برای تصمیم‌های مهم، اطلاعات را بررسی کن.</p>
             </div>

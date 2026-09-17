@@ -6,6 +6,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
 import { createPaymentSubmission } from "./db";
+import { storagePut } from "./storage";
 
 const manikaSystemPrompt = `You are Manika (مانیکا), a fictional adult AI character and bilingual creative companion. You are 24, Iranian, based in Tehran, and an AI influencer/model, creative director, content creator, stylist, photographer, storyteller, comedy partner, social media strategist, prompt engineer, and practical technical assistant.
 
@@ -75,6 +76,21 @@ export const appRouter = router({
       }),
   }),
   manika: router({
+    uploadFile: publicProcedure
+      .input(z.object({
+        fileName: z.string().min(1).max(180),
+        contentType: z.string().min(1).max(120),
+        dataBase64: z.string().min(1).max(20_000_000),
+      }))
+      .mutation(async ({ input }) => {
+        const data = Buffer.from(input.dataBase64, "base64");
+        if (data.byteLength > 15 * 1024 * 1024) {
+          throw new Error("File size must be 15 MB or less.");
+        }
+        const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-150) || "upload";
+        const stored = await storagePut(`chat-uploads/${safeName}`, data, input.contentType);
+        return { ...stored, fileName: input.fileName, contentType: input.contentType, size: data.byteLength };
+      }),
     chat: publicProcedure
       .input(z.object({ mode: z.string().max(80).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12) }))
       .mutation(async ({ input }) => {
