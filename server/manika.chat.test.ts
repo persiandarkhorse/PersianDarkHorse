@@ -76,4 +76,16 @@ describe("manika.chat", () => {
       mimeType: "image/png",
     }]);
   });
+
+  it("generates a general image without attaching Manika identity", async () => {
+    const caller = appRouter.createCaller(createContext());
+    await caller.manika.image({
+      mode: "generate",
+      imageType: "general",
+      prompt: "یک منظرهٔ کوهستانی سینمایی در طلوع آفتاب",
+    });
+
+    expect(generateImageMock.mock.calls[0]?.[0].originalImages).toBeUndefined();
+    expect(generateImageMock.mock.calls[0]?.[0].prompt).not.toContain("Manika's exact established face");
+  });
 });

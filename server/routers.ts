@@ -93,16 +93,22 @@ export const appRouter = router({
       .input(z.object({
         prompt: z.string().min(3).max(4000),
         mode: z.enum(["generate", "edit"]).default("generate"),
-        originalImageUrl: z.string().min(1).max(2000),
+        imageType: z.enum(["general", "manika"]).default("manika"),
+        originalImageUrl: z.string().min(1).max(2000).optional(),
       }))
       .mutation(async ({ input }) => {
+        if (input.imageType === "manika" && !input.originalImageUrl) {
+          throw new Error("A Manika reference image is required.");
+        }
         const identity = "Manika's exact established face from the attached primary reference image. The reference image is authoritative for facial identity and must be followed with minimal deviation: same face geometry, eye shape and hazel-brown/olive eye color, eyebrows, nose, lips, jawline, skin tone, skin texture, hairline and dark curly hair identity.";
-        const instruction = input.mode === "edit"
+        const instruction = input.imageType === "general"
+          ? `Create a high-quality photorealistic image based only on this concept. Do not add or preserve Manika's identity unless the user explicitly includes it in the concept. Requested concept: ${input.prompt}`
+          : input.mode === "edit"
           ? `Edit the provided primary Manika reference image. Make the smallest possible change. Preserve her exact face and identity, hair identity, facial expression unless requested, anatomy, camera perspective, lighting direction and every non-requested element. Apply only this requested change: ${input.prompt}`
           : `Create a new photorealistic image using the attached primary Manika face reference. Identity fidelity is the highest priority: reproduce the same face, not a similar woman. Keep her exact facial features and hair identity; change only the requested scene, outfit, pose or lighting. Requested concept: ${input.prompt}`;
         const result = await generateImage({
-          prompt: `${instruction}\nThe attached reference image is the primary identity reference, not optional inspiration. Avoid: different person, changed face, changed eye color, changed nose, changed lips, changed jawline, changed facial proportions, changed hair identity, plastic skin, doll face, CGI, 3D render, anime, cartoon, distorted hands, extra fingers, fake eyes, artificial background, watermark, text.`,
-          originalImages: [{ url: input.originalImageUrl, mimeType: "image/png" as const }],
+          prompt: input.imageType === "general" ? instruction : `${instruction}\n${identity}\nThe attached reference image is the primary identity reference, not optional inspiration. Avoid: different person, changed face, changed eye color, changed nose, changed lips, changed jawline, changed facial proportions, changed hair identity, plastic skin, doll face, CGI, 3D render, anime, cartoon, distorted hands, extra fingers, fake eyes, artificial background, watermark, text.`,
+          ...(input.imageType === "manika" && input.originalImageUrl ? { originalImages: [{ url: input.originalImageUrl, mimeType: "image/png" as const }] } : {}),
         });
         return { imageUrl: result.url };
       }),
