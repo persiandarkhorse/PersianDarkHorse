@@ -171,8 +171,8 @@ export default function Home() {
                 <img src={officialPortrait} alt="پرتره مانیکا" className="h-full w-full object-cover object-top" />
               </div>
               <div>
-                <p className="font-serif text-lg font-semibold tracking-tight">مانیکا</p>
-                <p className="text-[11px] text-[#9a8980]">Manika AI companion</p>
+                <p className="font-serif text-lg font-semibold tracking-tight">FEZI AI</p>
+                <p className="text-[11px] text-[#9a8980]">Manika · Creative AI</p>
               </div>
             </div>
             <button onClick={() => setMobileMenuOpen(false)} className="rounded-xl p-2 text-[#8f7d73] hover:bg-white lg:hidden" aria-label="بستن منو"><X size={18} /></button>
@@ -197,7 +197,7 @@ export default function Home() {
             </div>
           </div>
 
-          <Link href="/subscription" className="mt-5 flex items-center justify-between rounded-2xl border border-[#d9c0ae] bg-[#fffaf6] px-4 py-3 text-sm font-semibold text-[#79533f] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"><span className="flex items-center gap-2"><Coins size={16} /> خرید اشتراک</span><span className="text-[10px] font-normal text-[#ae8d79]">به‌زودی</span></Link>
+          <Link href="/subscription" className="mt-5 flex items-center justify-between rounded-2xl border border-[#d9c0ae] bg-[#fffaf6] px-4 py-3 text-sm font-semibold text-[#79533f] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"><span className="flex items-center gap-2"><Coins size={16} /> خرید اشتراک</span><span className="text-[10px] font-normal text-[#ae8d79]">پرداخت فعال</span></Link>
 
           <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-[#e7dcd4] bg-white/70 p-4">
             <div className="flex items-center gap-2 text-[#886d5c]"><Sparkles size={15} /><span className="text-xs font-semibold">هویت مانیکا فعال است</span></div>
