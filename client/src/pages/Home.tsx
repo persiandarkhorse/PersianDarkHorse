@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 
-const officialPortrait = "/manus-storage/manika_official_portrait_0a335a23.png";
+const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 
 type Role = "user" | "assistant";
 type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string };
@@ -131,7 +131,7 @@ export default function Home() {
       const result = await imageMutation.mutateAsync({
         mode: imageMode,
         prompt,
-        ...(imageMode === "edit" ? { originalImageUrl: new URL(officialPortrait, window.location.origin).toString() } : {}),
+        originalImageUrl: new URL(officialPortrait, window.location.origin).toString(),
       });
       setMessages((current) => [...current, {
         id: makeId(),

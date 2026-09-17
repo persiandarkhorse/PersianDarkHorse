@@ -65,10 +65,15 @@ describe("manika.chat", () => {
     const result = await caller.manika.image({
       mode: "generate",
       prompt: "مانیکا در یک گالری هنری با نور پنجره",
+      originalImageUrl: "https://example.com/manika-reference.png",
     });
 
     expect(result).toEqual({ imageUrl: "/manus-storage/generated.png" });
     expect(generateImageMock).toHaveBeenCalledOnce();
     expect(generateImageMock.mock.calls[0]?.[0].prompt).toContain("مانیکا");
+    expect(generateImageMock.mock.calls[0]?.[0].originalImages).toEqual([{
+      url: "https://example.com/manika-reference.png",
+      mimeType: "image/png",
+    }]);
   });
 });

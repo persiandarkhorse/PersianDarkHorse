@@ -84,18 +84,16 @@ export const appRouter = router({
       .input(z.object({
         prompt: z.string().min(3).max(4000),
         mode: z.enum(["generate", "edit"]).default("generate"),
-        originalImageUrl: z.string().min(1).max(2000).optional(),
+        originalImageUrl: z.string().min(1).max(2000),
       }))
       .mutation(async ({ input }) => {
-        const identity = "Manika, the established fictional adult Iranian AI influencer/model: softly oval face, large hazel-light brown eyes with subtle olive undertones, refined natural nose, natural full lips, warm-neutral fair realistic skin, long very dark brown-black naturally curly hair with small-to-medium defined curls. Preserve the same recognizable person, realistic anatomy and photorealistic natural skin.";
+        const identity = "Manika's exact established face from the attached primary reference image. The reference image is authoritative for facial identity and must be followed with minimal deviation: same face geometry, eye shape and hazel-brown/olive eye color, eyebrows, nose, lips, jawline, skin tone, skin texture, hairline and dark curly hair identity.";
         const instruction = input.mode === "edit"
-          ? `Edit the provided Manika reference image. Preserve her identity, face, hair identity, anatomy, perspective and all non-requested elements. Apply only the requested change: ${input.prompt}`
-          : `Create a new official photorealistic image of ${identity} Requested concept: ${input.prompt}`;
+          ? `Edit the provided primary Manika reference image. Make the smallest possible change. Preserve her exact face and identity, hair identity, facial expression unless requested, anatomy, camera perspective, lighting direction and every non-requested element. Apply only this requested change: ${input.prompt}`
+          : `Create a new photorealistic image using the attached primary Manika face reference. Identity fidelity is the highest priority: reproduce the same face, not a similar woman. Keep her exact facial features and hair identity; change only the requested scene, outfit, pose or lighting. Requested concept: ${input.prompt}`;
         const result = await generateImage({
-          prompt: `${instruction}\nAvoid: different person, changed face, changed eye color, plastic skin, doll face, CGI, 3D render, anime, cartoon, distorted hands, extra fingers, fake eyes, artificial background, watermark, text.`,
-          ...(input.mode === "edit" && input.originalImageUrl
-            ? { originalImages: [{ url: input.originalImageUrl, mimeType: "image/png" as const }] }
-            : {}),
+          prompt: `${instruction}\nThe attached reference image is the primary identity reference, not optional inspiration. Avoid: different person, changed face, changed eye color, changed nose, changed lips, changed jawline, changed facial proportions, changed hair identity, plastic skin, doll face, CGI, 3D render, anime, cartoon, distorted hands, extra fingers, fake eyes, artificial background, watermark, text.`,
+          originalImages: [{ url: input.originalImageUrl, mimeType: "image/png" as const }],
         });
         return { imageUrl: result.url };
       }),
