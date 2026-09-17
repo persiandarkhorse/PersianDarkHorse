@@ -1,9 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { invokeLLMMock } = vi.hoisted(() => ({ invokeLLMMock: vi.fn() }));
+const { invokeLLMMock, generateImageMock } = vi.hoisted(() => ({
+  invokeLLMMock: vi.fn(),
+  generateImageMock: vi.fn(),
+}));
 
 vi.mock("./_core/llm", () => ({
   invokeLLM: invokeLLMMock,
+}));
+
+vi.mock("./_core/imageGeneration", () => ({
+  generateImage: generateImageMock,
 }));
 
 import { appRouter } from "./routers";
@@ -20,9 +27,11 @@ function createContext(): TrpcContext {
 describe("manika.chat", () => {
   beforeEach(() => {
     invokeLLMMock.mockReset();
+    generateImageMock.mockReset();
     invokeLLMMock.mockResolvedValue({
       choices: [{ message: { content: "سلام، من مانیکا هستم." } }],
     });
+    generateImageMock.mockResolvedValue({ url: "/manus-storage/generated.png" });
   });
 
   it("returns the model response for a valid conversation", async () => {
@@ -49,5 +58,17 @@ describe("manika.chat", () => {
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(invokeLLMMock).not.toHaveBeenCalled();
+  });
+
+  it("generates an image through the server-side image service", async () => {
+    const caller = appRouter.createCaller(createContext());
+    const result = await caller.manika.image({
+      mode: "generate",
+      prompt: "مانیکا در یک گالری هنری با نور پنجره",
+    });
+
+    expect(result).toEqual({ imageUrl: "/manus-storage/generated.png" });
+    expect(generateImageMock).toHaveBeenCalledOnce();
+    expect(generateImageMock.mock.calls[0]?.[0].prompt).toContain("مانیکا");
   });
 });

@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
+import { generateImage } from "./_core/imageGeneration";
 
 const manikaSystemPrompt = `You are Manika (مانیکا), a fictional adult AI character and bilingual creative companion. You are 24, Iranian, based in Tehran, and an AI influencer/model, creative director, content creator, stylist, photographer, storyteller, comedy partner, social media strategist, prompt engineer, and practical technical assistant.
 
@@ -78,6 +79,25 @@ export const appRouter = router({
         const content = extractText(response.choices?.[0]?.message?.content);
         if (!content) throw new Error("The AI returned an empty response.");
         return { content };
+      }),
+    image: publicProcedure
+      .input(z.object({
+        prompt: z.string().min(3).max(4000),
+        mode: z.enum(["generate", "edit"]).default("generate"),
+        originalImageUrl: z.string().min(1).max(2000).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const identity = "Manika, the established fictional adult Iranian AI influencer/model: softly oval face, large hazel-light brown eyes with subtle olive undertones, refined natural nose, natural full lips, warm-neutral fair realistic skin, long very dark brown-black naturally curly hair with small-to-medium defined curls. Preserve the same recognizable person, realistic anatomy and photorealistic natural skin.";
+        const instruction = input.mode === "edit"
+          ? `Edit the provided Manika reference image. Preserve her identity, face, hair identity, anatomy, perspective and all non-requested elements. Apply only the requested change: ${input.prompt}`
+          : `Create a new official photorealistic image of ${identity} Requested concept: ${input.prompt}`;
+        const result = await generateImage({
+          prompt: `${instruction}\nAvoid: different person, changed face, changed eye color, plastic skin, doll face, CGI, 3D render, anime, cartoon, distorted hands, extra fingers, fake eyes, artificial background, watermark, text.`,
+          ...(input.mode === "edit" && input.originalImageUrl
+            ? { originalImages: [{ url: input.originalImageUrl, mimeType: "image/png" as const }] }
+            : {}),
+        });
+        return { imageUrl: result.url };
       }),
   }),
 });

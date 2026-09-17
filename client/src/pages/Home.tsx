@@ -23,7 +23,7 @@ import {
 const officialPortrait = "/manus-storage/manika_official_portrait_0a335a23.png";
 
 type Role = "user" | "assistant";
-type ChatMessage = { id: string; role: Role; content: string; createdAt: number };
+type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string };
 
 type Mode = {
   label: string;
@@ -73,13 +73,18 @@ export default function Home() {
   const [activeMode, setActiveMode] = useState(modes[0]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [imagePanelOpen, setImagePanelOpen] = useState(false);
+  const [imageMode, setImageMode] = useState<"generate" | "edit">("generate");
+  const [imagePrompt, setImagePrompt] = useState("");
   const chatMutation = trpc.manika.chat.useMutation();
+  const imageMutation = trpc.manika.image.useMutation();
 
   useEffect(() => {
     localStorage.setItem("manika-chat-history", JSON.stringify(messages));
   }, [messages]);
 
   const canSend = input.trim().length > 0 && !chatMutation.isPending;
+  const canGenerateImage = imagePrompt.trim().length > 2 && !imageMutation.isPending;
   const messageCount = useMemo(() => messages.filter((item) => item.role === "user").length, [messages]);
 
   async function sendMessage(value = input) {
@@ -116,6 +121,30 @@ export default function Home() {
           createdAt: Date.now(),
         },
       ]);
+    }
+  }
+
+  async function generateManikaImage() {
+    const prompt = imagePrompt.trim();
+    if (!prompt || imageMutation.isPending) return;
+    try {
+      const result = await imageMutation.mutateAsync({
+        mode: imageMode,
+        prompt,
+        ...(imageMode === "edit" ? { originalImageUrl: new URL(officialPortrait, window.location.origin).toString() } : {}),
+      });
+      setMessages((current) => [...current, {
+        id: makeId(),
+        role: "assistant",
+        content: imageMode === "edit" ? "تصویرت را با حفظ هویت مانیکا ویرایش کردم." : "تصویر جدید مانیکا آماده شد.",
+        imageUrl: result.imageUrl,
+        createdAt: Date.now(),
+      }]);
+      setImagePrompt("");
+      setImagePanelOpen(false);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "تولید تصویر موقتاً با مشکل روبه‌رو شد.";
+      setMessages((current) => [...current, { id: makeId(), role: "assistant", content: `نتونستم تصویر را آماده کنم.\n\nجزئیات: ${detail}`, createdAt: Date.now() }]);
     }
   }
 
@@ -197,6 +226,7 @@ export default function Home() {
                     <div className={`rounded-[20px] px-4 py-3.5 text-[14px] leading-7 ${message.role === "user" ? "rounded-tr-md bg-[#39312e] text-white" : "rounded-tl-md bg-[#f4efeb] text-[#453b37]"}`} dir="auto">
                       {message.role === "assistant" ? <Streamdown>{message.content}</Streamdown> : <p className="whitespace-pre-wrap">{message.content}</p>}
                     </div>
+                    {message.imageUrl && <div className="mt-3 overflow-hidden rounded-[20px] border border-[#e7d9d0] bg-white shadow-sm"><img src={message.imageUrl} alt="تصویر تولیدشده از مانیکا" className="max-h-[560px] w-full object-cover" /><div className="flex items-center justify-between px-3 py-2 text-[11px] text-[#9b8980]"><span>تصویر تولیدشده با هویت بصری مانیکا</span><a href={message.imageUrl} target="_blank" rel="noreferrer" className="font-medium text-[#775541] hover:underline">باز کردن تصویر</a></div></div>}
                     {message.role === "assistant" && message.id !== "welcome" && <div className="mt-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100"><button onClick={() => copyMessage(message)} className="rounded-lg p-1.5 text-[#a69288] hover:bg-[#f2eae4]" title="کپی"><span className="sr-only">کپی</span>{copiedId === message.id ? <Check size={14} /> : <Copy size={14} />}</button></div>}
                   </div>
                 </div>)}
@@ -209,9 +239,10 @@ export default function Home() {
 
           <div className="px-5 pb-5 pt-2 md:px-12 lg:px-20">
             <div className="mx-auto max-w-3xl">
+              {imagePanelOpen && <div className="mb-3 rounded-[22px] border border-[#dfd3ca] bg-[#fffdfb] p-4 shadow-[0_8px_24px_rgba(91,62,46,0.06)]"><div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold text-[#4a3b34]">استودیوی تصویر مانیکا</p><p className="mt-1 text-[11px] text-[#a18f86]">توصیف صحنه را بنویس؛ هویت چهره حفظ می‌شود.</p></div><button onClick={() => setImagePanelOpen(false)} className="rounded-xl p-2 text-[#9d897d] hover:bg-[#f4ece7]" aria-label="بستن استودیو"><X size={16} /></button></div><div className="mb-3 flex gap-2"><button onClick={() => setImageMode("generate")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "generate" ? "bg-[#39312e] text-white" : "bg-[#f1e9e4] text-[#806d62]"}`}>تولید تصویر</button><button onClick={() => setImageMode("edit")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "edit" ? "bg-[#39312e] text-white" : "bg-[#f1e9e4] text-[#806d62]"}`}>ویرایش پرتره رسمی</button></div><Textarea value={imagePrompt} onChange={(event) => setImagePrompt(event.target.value)} placeholder={imageMode === "edit" ? "مثلاً: پس‌زمینه را به یک کافهٔ پاریسی در ساعت طلایی تبدیل کن..." : "مثلاً: مانیکا در یک گالری هنری مدرن، کت مشکی و نور پنجره..."} className="min-h-[82px] resize-none rounded-2xl border-[#e5d8cf] bg-white text-sm leading-6" dir="rtl" /><div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-[#ae9b91]">تولید تصویر ممکن است چند ثانیه زمان ببرد.</span><Button onClick={generateManikaImage} disabled={!canGenerateImage} className="rounded-xl bg-[#8b6049] text-white hover:bg-[#724b38] disabled:bg-[#e5dcd6]"><Sparkles size={15} className="ml-2" />{imageMutation.isPending ? "در حال ساخت..." : imageMode === "edit" ? "ویرایش تصویر" : "تولید تصویر"}</Button></div></div>}
               <div className="rounded-[24px] border border-[#dfd3ca] bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] focus-within:border-[#c9a991] focus-within:ring-4 focus-within:ring-[#e8d4c4]/40">
                 <Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="پیامت را برای مانیکا بنویس..." className="min-h-[54px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 shadow-none focus-visible:ring-0" dir="auto" />
-                <div className="flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#ad9b91]"><button className="rounded-xl p-2 hover:bg-[#f5efeb]" title="پیوست"><Paperclip size={17} /></button><button className="rounded-xl p-2 hover:bg-[#f5efeb]" title="تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#b6a49a] sm:block">{messageCount} پیام در این گفت‌وگو</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#e8e0db] disabled:text-[#b6a69d]"><ArrowUp size={17} /></Button></div>
+                <div className="flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#ad9b91]"><button className="rounded-xl p-2 hover:bg-[#f5efeb]" title="پیوست"><Paperclip size={17} /></button><button onClick={() => setImagePanelOpen((open) => !open)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${imagePanelOpen ? "bg-[#f1e5dd] text-[#775541]" : ""}`} title="تولید یا ویرایش تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#b6a49a] sm:block">{messageCount} پیام در این گفت‌وگو</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#e8e0db] disabled:text-[#b6a69d]"><ArrowUp size={17} /></Button></div>
               </div>
               <p className="mt-3 text-center text-[10px] text-[#b3a29a]">مانیکا ممکن است اشتباه کند؛ برای تصمیم‌های مهم، اطلاعات را بررسی کن.</p>
             </div>
