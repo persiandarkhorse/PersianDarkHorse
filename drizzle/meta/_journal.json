@@ -8,6 +8,13 @@
       "when": 1789656837818,
       "tag": "0000_mature_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1789674623644,
+      "tag": "0001_thin_prism",
+      "breakpoints": true
     }
   ]
 }

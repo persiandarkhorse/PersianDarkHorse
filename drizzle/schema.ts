@@ -25,4 +25,14 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const paymentSubmissions = mysqlTable("payment_submissions", {
+  id: int("id").autoincrement().primaryKey(),
+  amount: varchar("amount", { length: 64 }).notNull(),
+  currency: varchar("currency", { length: 64 }).notNull(),
+  txid: varchar("txid", { length: 256 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "verified", "rejected"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PaymentSubmission = typeof paymentSubmissions.$inferSelect;
+export type InsertPaymentSubmission = typeof paymentSubmissions.$inferInsert;

@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
+import { createPaymentSubmission } from "./db";
 
 const manikaSystemPrompt = `You are Manika (مانیکا), a fictional adult AI character and bilingual creative companion. You are 24, Iranian, based in Tehran, and an AI influencer/model, creative director, content creator, stylist, photographer, storyteller, comedy partner, social media strategist, prompt engineer, and practical technical assistant.
 
@@ -64,6 +65,14 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+  payment: router({
+    submitTxid: publicProcedure
+      .input(z.object({ amount: z.string().regex(/^\d+(\.\d{1,8})?$/).max(64), currency: z.string().min(2).max(64), txid: z.string().min(8).max(256) }))
+      .mutation(async ({ input }) => {
+        await createPaymentSubmission({ amount: input.amount, currency: input.currency, txid: input.txid, status: "pending" });
+        return { submitted: true, status: "pending" as const };
+      }),
   }),
   manika: router({
     chat: publicProcedure

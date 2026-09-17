@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Coins,
   Copy,
+  Instagram,
+  Mail,
   Image as ImageIcon,
   Menu,
   MessageCircle,
@@ -18,6 +20,7 @@ import {
   Paperclip,
   Plus,
   Sparkles,
+  Send,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -171,8 +174,8 @@ export default function Home() {
                 <img src={officialPortrait} alt="پرتره مانیکا" className="h-full w-full object-cover object-top" />
               </div>
               <div>
-                <p className="font-serif text-lg font-semibold tracking-tight">FEZI AI</p>
-                <p className="text-[11px] text-[#666666]">Manika · Creative AI</p>
+                <p className="font-serif text-lg font-semibold tracking-tight">Persian Dark Horse</p>
+                <p className="text-[11px] text-[#666666]">FEZI AI · Manika</p>
               </div>
             </div>
             <button onClick={() => setMobileMenuOpen(false)} className="rounded-xl p-2 text-[#666666] hover:bg-white lg:hidden" aria-label="بستن منو"><X size={18} /></button>
@@ -199,7 +202,16 @@ export default function Home() {
 
           <Link href="/subscription" className="mt-5 flex items-center justify-between rounded-2xl border border-[#d9c0ae] bg-[#ffffff] px-4 py-3 text-sm font-semibold text-[#111111] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"><span className="flex items-center gap-2"><Coins size={16} /> خرید اشتراک</span><span className="text-[10px] font-normal text-[#666666]">پرداخت فعال</span></Link>
 
-          <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-[#dddddd] bg-white/70 p-4">
+          <div className="mt-4 rounded-2xl border border-[#dddddd] bg-white p-4">
+            <p className="text-xs font-semibold">ارتباط با ما</p>
+            <div className="mt-3 space-y-2 text-[11px] text-[#666666]">
+              <a className="flex items-center gap-2 hover:text-black" href="https://Instagram.com/Pdh.ir" target="_blank" rel="noreferrer"><Instagram size={14} /> Instagram</a>
+              <a className="flex items-center gap-2 hover:text-black" href="https://t.me/persiandarkhorse" target="_blank" rel="noreferrer"><Send size={14} /> Telegram</a>
+              <a className="flex items-center gap-2 hover:text-black" href="mailto:Persiandarkhorsesup@gmail.com"><Mail size={14} /> Email</a>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[#dddddd] bg-white/70 p-4">
             <div className="flex items-center gap-2 text-[#333333]"><Sparkles size={15} /><span className="text-xs font-semibold">هویت مانیکا فعال است</span></div>
             <p className="mt-2 text-[11px] leading-5 text-[#9c8980]">چهره، لحن و نگاه خلاقانهٔ مانیکا در این فضا حفظ می‌شود.</p>
           </div>
@@ -211,7 +223,7 @@ export default function Home() {
           <header className="flex h-[78px] items-center justify-between border-b border-[#eeeeee] px-5 md:px-9">
             <div className="flex items-center gap-3">
               <button onClick={() => setMobileMenuOpen(true)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5] lg:hidden" aria-label="باز کردن منو"><Menu size={19} /></button>
-              <div><p className="font-serif text-[19px] font-semibold">فضای خلاق مانیکا</p><p className="mt-0.5 text-[11px] text-[#666666]">{activeMode.label} <span className="mx-1 text-[#bbbbbb]">·</span> گفت‌وگوی خصوصی</p></div>
+              <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {activeMode.label} <span className="mx-1 text-[#bbbbbb]">·</span> گفت‌وگوی خصوصی</p></div>
             </div>
             <div className="flex items-center gap-1 text-[#666666]"><button onClick={clearChat} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="پاک‌کردن گفت‌وگو"><MoreHorizontal size={19} /></button></div>
           </header>
