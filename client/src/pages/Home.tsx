@@ -116,13 +116,12 @@ export default function Home() {
         { id: makeId(), role: "assistant", content: result.content, createdAt: Date.now() },
       ]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "پاسخ‌گویی موقتاً با مشکل روبه‌رو شد.";
       setMessages((current) => [
         ...current,
         {
           id: makeId(),
           role: "assistant",
-          content: `متأسفم، فعلاً نتونستم پاسخ بدم.\n\nجزئیات: ${message}`,
+          content: "متأسفانه در حال حاضر نمی‌توانم کمکتان کنم.",
           createdAt: Date.now(),
         },
       ]);
