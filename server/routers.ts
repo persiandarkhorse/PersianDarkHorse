@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
+import { transcribeAudio } from "./_core/voiceTranscription";
 import { createPaymentSubmission } from "./db";
 import { storagePut } from "./storage";
 
@@ -102,18 +103,40 @@ export const appRouter = router({
         return { ...stored, fileName: input.fileName, contentType: input.contentType, size: data.byteLength };
       }),
     chat: publicProcedure
-      .input(z.object({ mode: z.string().max(80).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12) }))
+      .input(z.object({ mode: z.string().max(80).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12), deepThinking: z.boolean().default(false), webSearch: z.boolean().default(false) }))
       .mutation(async ({ input }) => {
         const context = input.messages.map((message) => ({ role: message.role, content: message.content }));
+        let webContext = "";
+        if (input.webSearch) {
+          const query = input.messages.at(-1)?.content.slice(0, 240) ?? "";
+          try {
+            const searchResponse = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+            if (searchResponse.ok) {
+              const search = await searchResponse.json() as { AbstractText?: string; AbstractURL?: string; RelatedTopics?: Array<{ Text?: string; FirstURL?: string }> };
+              const related = (search.RelatedTopics ?? []).slice(0, 5).map((item) => item.Text ? `${item.Text}${item.FirstURL ? ` (${item.FirstURL})` : ""}` : "").filter(Boolean).join("\n");
+              webContext = [search.AbstractText ? `${search.AbstractText}${search.AbstractURL ? ` (${search.AbstractURL})` : ""}` : "", related].filter(Boolean).join("\n");
+            }
+          } catch {
+            webContext = "جست‌وجوی وب در دسترس نبود؛ پاسخ را بدون ادعای بررسی زنده ارائه کن.";
+          }
+        }
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `${manikaSystemPrompt}\n\nCurrent mode: ${input.mode}.` },
+            { role: "system", content: `${manikaSystemPrompt}\n\nCurrent mode: ${input.mode}.${input.deepThinking ? "\nUse deliberate multi-step reasoning internally, but do not reveal private chain-of-thought; provide a concise answer with conclusions and useful reasoning summaries." : ""}${input.webSearch ? `\nUse the following live-search context only as evidence, cite links when relevant, and clearly say when it is insufficient:\n${webContext || "No reliable results were returned."}` : ""}` },
             ...context,
           ],
+          ...(input.deepThinking ? { reasoning: { effort: "medium" as const } } : {}),
         });
         const content = extractText(response.choices?.[0]?.message?.content);
         if (!content) throw new Error("The AI returned an empty response.");
         return { content };
+      }),
+    transcribe: publicProcedure
+      .input(z.object({ audioUrl: z.string().url().max(2000), language: z.string().length(2).optional() }))
+      .mutation(async ({ input }) => {
+        const result = await transcribeAudio({ audioUrl: input.audioUrl, language: input.language, prompt: "Transcribe the user's Persian or English voice message accurately." });
+        if ("error" in result) throw new Error(result.error);
+        return { text: result.text, language: result.language };
       }),
     speech: publicProcedure
       .input(z.object({ text: z.string().min(1).max(2000), voiceId: z.string().min(1).max(120).default("sabrina"), model: z.string().min(1).max(80).default("simba-3.2") }))

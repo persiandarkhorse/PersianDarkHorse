@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { Link } from "wouter";
-import { puter } from "@heyputer/puter.js";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,10 +12,13 @@ import {
   Coins,
   Copy,
   Download,
+  Globe2,
+  BrainCircuit,
   Instagram,
   Mail,
   Image as ImageIcon,
   Menu,
+  Mic,
   MessageCircle,
   MoreHorizontal,
   Paperclip,
@@ -32,7 +34,6 @@ import {
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 
 type Role = "user" | "assistant";
-type ChatProvider = "manus" | "puter";
 type Attachment = { fileName: string; contentType: string; size: number; url: string };
 type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string; audioUrl?: string; attachment?: Attachment };
 
@@ -82,10 +83,9 @@ export default function Home() {
   });
   const [input, setInput] = useState("");
   const [activeMode, setActiveMode] = useState(modes[0]);
-  const [chatProvider, setChatProvider] = useState<ChatProvider>("manus");
-  const [puterSignedIn, setPuterSignedIn] = useState(false);
-  const [puterAuthPending, setPuterAuthPending] = useState(false);
-  const [puterUsage, setPuterUsage] = useState<string | null>(null);
+  const [deepThinking, setDeepThinking] = useState(false);
+  const [webSearch, setWebSearch] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePanelOpen, setImagePanelOpen] = useState(false);
@@ -101,6 +101,9 @@ export default function Home() {
   const imageMutation = trpc.manika.image.useMutation();
   const uploadMutation = trpc.manika.uploadFile.useMutation();
   const speechMutation = trpc.manika.speech.useMutation();
+  const transcribeMutation = trpc.manika.transcribe.useMutation();
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     localStorage.setItem("manika-chat-history", JSON.stringify(messages));
@@ -110,24 +113,35 @@ export default function Home() {
   const canGenerateImage = imagePrompt.trim().length > 2 && !imageMutation.isPending;
   const messageCount = useMemo(() => messages.filter((item) => item.role === "user").length, [messages]);
 
-  useEffect(() => {
-    setPuterSignedIn(puter.auth.isSignedIn());
-  }, []);
-
-  async function connectPuter() {
-    setPuterAuthPending(true);
-    try {
-      await puter.auth.signIn();
-      setPuterSignedIn(puter.auth.isSignedIn());
-    } finally {
-      setPuterAuthPending(false);
+  async function toggleRecording() {
+    if (recording) {
+      recorderRef.current?.stop();
+      setRecording(false);
+      return;
     }
-  }
-
-  async function loadPuterUsage() {
-    if (!puterSignedIn) return;
-    const usage = await puter.auth.getMonthlyUsage();
-    setPuterUsage(JSON.stringify(usage));
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setUploadError("مرورگر شما از ضبط صدا پشتیبانی نمی‌کند.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordingChunksRef.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) recordingChunksRef.current.push(event.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const dataBase64 = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1] ?? ""); reader.onerror = reject; reader.readAsDataURL(blob); });
+        try {
+          const uploaded = await uploadMutation.mutateAsync({ fileName: `voice-${Date.now()}.webm`, contentType: blob.type, dataBase64 });
+          const result = await transcribeMutation.mutateAsync({ audioUrl: new URL(uploaded.url, window.location.origin).toString() });
+          setInput((current) => current ? `${current} ${result.text}` : result.text);
+        } catch { setUploadError("تبدیل ویس به متن انجام نشد. لطفاً دوباره امتحان کنید."); }
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch { setUploadError("دسترسی به میکروفن داده نشد."); }
   }
 
   async function uploadFile(file: File) {
@@ -178,24 +192,13 @@ export default function Home() {
 
     try {
       let responseContent: string;
-      if (chatProvider === "puter") {
-        if (!puterSignedIn) {
-          await connectPuter();
-        }
-        const response = await puter.ai.chat([
-          { role: "system", content: `You are Manika, a warm bilingual creative companion. Reply in the user's language. Current mode: ${activeMode.label}.` },
-          ...nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
-        ]);
-        const content = response.message?.content;
-        responseContent = typeof content === "string" ? content : Array.isArray(content) ? content.map((part) => typeof part === "string" ? part : "text" in part ? part.text : "").join("\n") : "";
-        if (!responseContent) throw new Error("Puter returned an empty response.");
-      } else {
-        const result = await chatMutation.mutateAsync({
-          mode: activeMode.label,
-          messages: nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
-        });
-        responseContent = result.content;
-      }
+      const result = await chatMutation.mutateAsync({
+        mode: activeMode.label,
+        messages: nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
+        deepThinking,
+        webSearch,
+      });
+      responseContent = result.content;
       setMessages((current) => [
         ...current,
         { id: makeId(), role: "assistant", content: responseContent, createdAt: Date.now() },
@@ -287,12 +290,8 @@ export default function Home() {
           </Button>
 
           <div className="mt-4 rounded-2xl border border-[#dddddd] bg-white p-3">
-            <div className="mb-2 flex items-center justify-between"><span className="text-[11px] font-semibold">موتور پاسخ‌گویی</span><span className="text-[10px] text-[#888888]">اختیاری</span></div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button onClick={() => setChatProvider("manus")} className={`rounded-xl px-2 py-2 text-[11px] ${chatProvider === "manus" ? "bg-[#111111] text-white" : "bg-[#f3f3f3] text-[#666666]"}`}>FEZI AI</button>
-              <button onClick={() => setChatProvider("puter")} className={`rounded-xl px-2 py-2 text-[11px] ${chatProvider === "puter" ? "bg-[#111111] text-white" : "bg-[#f3f3f3] text-[#666666]"}`}>Puter AI</button>
-            </div>
-            {chatProvider === "puter" && <div className="mt-2 rounded-xl bg-[#f7f7f7] p-2 text-[10px] leading-5 text-[#666666]">Puter با حساب خود کاربر و مدل User-Pays اجرا می‌شود. {puterSignedIn ? <><span>متصل است.</span><button onClick={() => void loadPuterUsage()} className="mr-2 font-semibold text-[#111111] underline">نمایش مصرف</button>{puterUsage && <pre className="mt-2 max-h-20 overflow-auto whitespace-pre-wrap text-[9px]">{puterUsage}</pre>}</> : <button onClick={connectPuter} disabled={puterAuthPending} className="font-semibold text-[#111111] underline">{puterAuthPending ? "در حال اتصال..." : "ورود به Puter"}</button>}</div>}
+            <div className="flex items-center justify-between"><span className="text-[11px] font-semibold">موتور یکپارچه FEZI AI</span><span className="text-[10px] text-[#888888]">خودکار</span></div>
+            <p className="mt-2 text-[10px] leading-5 text-[#666666]">FEZI AI بهترین مسیر داخلی را برای هر درخواست انتخاب می‌کند؛ موتورهای پشتیبان برای شما یکپارچه و نامرئی هستند.</p>
           </div>
 
           <div className="mt-9">
@@ -334,7 +333,7 @@ export default function Home() {
               <button onClick={() => setMobileMenuOpen(true)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5] lg:hidden" aria-label="باز کردن منو"><Menu size={19} /></button>
               <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {activeMode.label} <span className="mx-1 text-[#bbbbbb]">·</span> گفت‌وگوی خصوصی</p></div>
             </div>
-            <div className="flex items-center gap-1 text-[#666666]"><button onClick={clearChat} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="پاک‌کردن گفت‌وگو"><MoreHorizontal size={19} /></button></div>
+                <div className="flex items-center gap-1 text-[#666666]"><Link href="/api" className="rounded-xl px-3 py-2 text-[11px] hover:bg-[#f5f5f5]">APIهای ما</Link><button onClick={clearChat} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="پاک‌کردن گفت‌وگو"><MoreHorizontal size={19} /></button></div>
           </header>
 
           <div className="flex-1 overflow-y-auto px-5 py-8 md:px-12 lg:px-20">
@@ -370,10 +369,10 @@ export default function Home() {
               {attachment && <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-xs"><span className="flex min-w-0 items-center gap-2"><FileText size={15} /><span className="truncate">{attachment.fileName}</span></span><button onClick={() => setAttachment(null)} className="rounded-lg p-1 text-[#777777] hover:bg-[#f2f2f2]" aria-label="حذف فایل پیوست"><X size={15} /></button></div>}
               <div onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }} onDragLeave={() => setIsDraggingFile(false)} onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); handleFiles(event.dataTransfer.files); }} className={`rounded-[24px] border bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] transition focus-within:ring-4 focus-within:ring-[#dddddd]/40 ${isDraggingFile ? "border-[#111111] bg-[#fafafa] ring-4 ring-[#dddddd]" : "border-[#e5e5e5] focus-within:border-[#888888]"}`}>
                 <Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="پیامت را برای مانیکا بنویس..." className="min-h-[54px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 shadow-none focus-visible:ring-0" dir="auto" />
-                <div className="flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#777777]"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.json" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${isDraggingFile ? "bg-[#eeeeee]" : ""}`} title="پیوست یا رها کردن فایل" aria-label="پیوست یا رها کردن فایل"><Paperclip size={17} /></button><button onClick={() => setImagePanelOpen((open) => !open)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${imagePanelOpen ? "bg-[#eeeeee] text-[#222222]" : ""}`} title="تولید یا ویرایش تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#999999] sm:block">{isDraggingFile ? "فایل را رها کنید" : `${messageCount} پیام در این گفت‌وگو · تصویر یا سند را اینجا رها کنید`}</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]"><ArrowUp size={17} /></Button></div>
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#777777]"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.json" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${isDraggingFile ? "bg-[#eeeeee]" : ""}`} title="پیوست یا رها کردن فایل" aria-label="پیوست یا رها کردن فایل"><Paperclip size={17} /></button><button onClick={() => void toggleRecording()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${recording ? "bg-[#111111] text-white" : ""}`} title={recording ? "توقف ضبط ویس" : "ضبط و ارسال ویس"} aria-label={recording ? "توقف ضبط ویس" : "ضبط و ارسال ویس"}><Mic size={17} /></button><button onClick={() => setDeepThinking((value) => !value)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${deepThinking ? "bg-[#111111] text-white" : ""}`} title="تفکر عمیق" aria-pressed={deepThinking}><BrainCircuit size={17} /></button><button onClick={() => setWebSearch((value) => !value)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${webSearch ? "bg-[#111111] text-white" : ""}`} title="جست‌وجو در اینترنت" aria-pressed={webSearch}><Globe2 size={17} /></button><button onClick={() => setImagePanelOpen((open) => !open)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${imagePanelOpen ? "bg-[#eeeeee] text-[#222222]" : ""}`} title="تولید یا ویرایش تصویر" aria-label="تولید یا ویرایش تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#999999] sm:block">{recording ? "در حال ضبط ویس..." : `${messageCount} پیام · ${deepThinking ? "تفکر عمیق فعال" : ""} ${webSearch ? "جست‌وجوی وب فعال" : ""}`}</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]"><ArrowUp size={17} /></Button></div>
               </div>
               <p className="mt-3 text-center text-[10px] text-[#999999]">مانیکا ممکن است اشتباه کند؛ برای تصمیم‌های مهم، اطلاعات را بررسی کن.</p>
-              <p className="mt-2 text-center text-[10px] text-[#b0b0b0]">Powered by <a href="https://developer.puter.com" target="_blank" rel="noreferrer" className="underline">Puter</a> · FEZI AI</p>
+              <p className="mt-2 text-center text-[10px] text-[#b0b0b0]">FEZI AI · Persian Dark Horse</p>
             </div>
           </div>
         </main>
