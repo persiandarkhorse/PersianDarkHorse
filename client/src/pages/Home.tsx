@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { Link } from "wouter";
+import { puter } from "@heyputer/puter.js";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +32,7 @@ import {
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 
 type Role = "user" | "assistant";
+type ChatProvider = "manus" | "puter";
 type Attachment = { fileName: string; contentType: string; size: number; url: string };
 type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string; audioUrl?: string; attachment?: Attachment };
 
@@ -80,6 +82,10 @@ export default function Home() {
   });
   const [input, setInput] = useState("");
   const [activeMode, setActiveMode] = useState(modes[0]);
+  const [chatProvider, setChatProvider] = useState<ChatProvider>("manus");
+  const [puterSignedIn, setPuterSignedIn] = useState(false);
+  const [puterAuthPending, setPuterAuthPending] = useState(false);
+  const [puterUsage, setPuterUsage] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePanelOpen, setImagePanelOpen] = useState(false);
@@ -103,6 +109,26 @@ export default function Home() {
   const canSend = (input.trim().length > 0 || Boolean(attachment)) && !chatMutation.isPending && !uploadMutation.isPending;
   const canGenerateImage = imagePrompt.trim().length > 2 && !imageMutation.isPending;
   const messageCount = useMemo(() => messages.filter((item) => item.role === "user").length, [messages]);
+
+  useEffect(() => {
+    setPuterSignedIn(puter.auth.isSignedIn());
+  }, []);
+
+  async function connectPuter() {
+    setPuterAuthPending(true);
+    try {
+      await puter.auth.signIn();
+      setPuterSignedIn(puter.auth.isSignedIn());
+    } finally {
+      setPuterAuthPending(false);
+    }
+  }
+
+  async function loadPuterUsage() {
+    if (!puterSignedIn) return;
+    const usage = await puter.auth.getMonthlyUsage();
+    setPuterUsage(JSON.stringify(usage));
+  }
 
   async function uploadFile(file: File) {
     setUploadError(null);
@@ -151,13 +177,28 @@ export default function Home() {
     setAttachment(null);
 
     try {
-      const result = await chatMutation.mutateAsync({
-        mode: activeMode.label,
-        messages: nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
-      });
+      let responseContent: string;
+      if (chatProvider === "puter") {
+        if (!puterSignedIn) {
+          await connectPuter();
+        }
+        const response = await puter.ai.chat([
+          { role: "system", content: `You are Manika, a warm bilingual creative companion. Reply in the user's language. Current mode: ${activeMode.label}.` },
+          ...nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
+        ]);
+        const content = response.message?.content;
+        responseContent = typeof content === "string" ? content : Array.isArray(content) ? content.map((part) => typeof part === "string" ? part : "text" in part ? part.text : "").join("\n") : "";
+        if (!responseContent) throw new Error("Puter returned an empty response.");
+      } else {
+        const result = await chatMutation.mutateAsync({
+          mode: activeMode.label,
+          messages: nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
+        });
+        responseContent = result.content;
+      }
       setMessages((current) => [
         ...current,
-        { id: makeId(), role: "assistant", content: result.content, createdAt: Date.now() },
+        { id: makeId(), role: "assistant", content: responseContent, createdAt: Date.now() },
       ]);
     } catch (error) {
       setMessages((current) => [
@@ -245,6 +286,15 @@ export default function Home() {
             <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px]">⌘ K</span>
           </Button>
 
+          <div className="mt-4 rounded-2xl border border-[#dddddd] bg-white p-3">
+            <div className="mb-2 flex items-center justify-between"><span className="text-[11px] font-semibold">موتور پاسخ‌گویی</span><span className="text-[10px] text-[#888888]">اختیاری</span></div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={() => setChatProvider("manus")} className={`rounded-xl px-2 py-2 text-[11px] ${chatProvider === "manus" ? "bg-[#111111] text-white" : "bg-[#f3f3f3] text-[#666666]"}`}>FEZI AI</button>
+              <button onClick={() => setChatProvider("puter")} className={`rounded-xl px-2 py-2 text-[11px] ${chatProvider === "puter" ? "bg-[#111111] text-white" : "bg-[#f3f3f3] text-[#666666]"}`}>Puter AI</button>
+            </div>
+            {chatProvider === "puter" && <div className="mt-2 rounded-xl bg-[#f7f7f7] p-2 text-[10px] leading-5 text-[#666666]">Puter با حساب خود کاربر و مدل User-Pays اجرا می‌شود. {puterSignedIn ? <><span>متصل است.</span><button onClick={() => void loadPuterUsage()} className="mr-2 font-semibold text-[#111111] underline">نمایش مصرف</button>{puterUsage && <pre className="mt-2 max-h-20 overflow-auto whitespace-pre-wrap text-[9px]">{puterUsage}</pre>}</> : <button onClick={connectPuter} disabled={puterAuthPending} className="font-semibold text-[#111111] underline">{puterAuthPending ? "در حال اتصال..." : "ورود به Puter"}</button>}</div>}
+          </div>
+
           <div className="mt-9">
             <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666666]">حالت‌های کاری</p>
             <div className="space-y-1.5">
@@ -323,6 +373,7 @@ export default function Home() {
                 <div className="flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-0.5 text-[#777777]"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.json" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${isDraggingFile ? "bg-[#eeeeee]" : ""}`} title="پیوست یا رها کردن فایل" aria-label="پیوست یا رها کردن فایل"><Paperclip size={17} /></button><button onClick={() => setImagePanelOpen((open) => !open)} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${imagePanelOpen ? "bg-[#eeeeee] text-[#222222]" : ""}`} title="تولید یا ویرایش تصویر"><ImageIcon size={17} /></button><span className="mr-2 hidden text-[10px] text-[#999999] sm:block">{isDraggingFile ? "فایل را رها کنید" : `${messageCount} پیام در این گفت‌وگو · تصویر یا سند را اینجا رها کنید`}</span></div><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]"><ArrowUp size={17} /></Button></div>
               </div>
               <p className="mt-3 text-center text-[10px] text-[#999999]">مانیکا ممکن است اشتباه کند؛ برای تصمیم‌های مهم، اطلاعات را بررسی کن.</p>
+              <p className="mt-2 text-center text-[10px] text-[#b0b0b0]">Powered by <a href="https://developer.puter.com" target="_blank" rel="noreferrer" className="underline">Puter</a> · FEZI AI</p>
             </div>
           </div>
         </main>
