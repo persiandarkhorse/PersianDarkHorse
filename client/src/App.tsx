@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Subscription from "./pages/Subscription";
 import API from "./pages/API";
 import Onboarding from "./pages/Onboarding";
+import Legal from "./pages/Legal";
 
 function HomeGate() {
   const [, navigate] = useLocation();
@@ -24,6 +25,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={HomeGate} />
       <Route path={"/welcome"} component={Onboarding} />
+      <Route path={"/legal"} component={Legal} />
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/api"} component={API} />
       <Route path={"/404"} component={NotFound} />
