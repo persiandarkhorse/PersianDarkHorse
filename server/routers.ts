@@ -115,6 +115,21 @@ export const appRouter = router({
         if (!content) throw new Error("The AI returned an empty response.");
         return { content };
       }),
+    speech: publicProcedure
+      .input(z.object({ text: z.string().min(1).max(2000), voiceId: z.string().min(1).max(120).default("sabrina"), model: z.string().min(1).max(80).default("simba-3.2") }))
+      .mutation(async ({ input }) => {
+        const apiKey = process.env.SPEECHIFY_API_KEY;
+        if (!apiKey) throw new Error("Speechify is not configured.");
+        const response = await fetch("https://api.speechify.ai/v1/audio/speech", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ input: input.text, voice_id: input.voiceId, model: input.model, audio_format: "mp3" }),
+        });
+        if (!response.ok) throw new Error("Speechify could not generate audio.");
+        const body = (await response.json()) as { audio_data?: string; audio_format?: string };
+        if (!body.audio_data) throw new Error("Speechify returned no audio.");
+        return { audioBase64: body.audio_data, contentType: body.audio_format === "wav" ? "audio/wav" : "audio/mpeg" };
+      }),
     image: publicProcedure
       .input(z.object({
         prompt: z.string().min(3).max(4000),

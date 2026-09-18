@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Coins,
   Copy,
+  Download,
   Instagram,
   Mail,
   Image as ImageIcon,
@@ -22,6 +23,7 @@ import {
   Plus,
   Sparkles,
   Send,
+  Volume2,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -30,7 +32,7 @@ const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b
 
 type Role = "user" | "assistant";
 type Attachment = { fileName: string; contentType: string; size: number; url: string };
-type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string; attachment?: Attachment };
+type ChatMessage = { id: string; role: Role; content: string; createdAt: number; imageUrl?: string; audioUrl?: string; attachment?: Attachment };
 
 type Mode = {
   label: string;
@@ -87,10 +89,12 @@ export default function Home() {
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatMutation = trpc.manika.chat.useMutation();
   const imageMutation = trpc.manika.image.useMutation();
   const uploadMutation = trpc.manika.uploadFile.useMutation();
+  const speechMutation = trpc.manika.speech.useMutation();
 
   useEffect(() => {
     localStorage.setItem("manika-chat-history", JSON.stringify(messages));
@@ -204,6 +208,21 @@ export default function Home() {
     window.setTimeout(() => setCopiedId(null), 1600);
   }
 
+  async function generateAudio(message: ChatMessage) {
+    if (audioLoadingId) return;
+    setAudioLoadingId(message.id);
+    try {
+      const result = await speechMutation.mutateAsync({ text: message.content, voiceId: "sabrina", model: "simba-3.2" });
+      const binary = Uint8Array.from(atob(result.audioBase64), (character) => character.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([binary], { type: result.contentType }));
+      setMessages((current) => current.map((item) => item.id === message.id ? { ...item, audioUrl: url } : item));
+    } catch {
+      setUploadError("تولید صوت انجام نشد. لطفاً دوباره امتحان کنید.");
+    } finally {
+      setAudioLoadingId(null);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#ffffff] text-[#111111] selection:bg-[#e5e5e5]/50">
       <div className="mx-auto flex min-h-screen max-w-[1560px] overflow-hidden bg-[#ffffff] shadow-[0_20px_80px_rgba(65,45,35,0.08)] lg:min-h-[calc(100vh-32px)] lg:my-4 lg:rounded-[30px]">
@@ -284,7 +303,7 @@ export default function Home() {
                     </div>
                     {message.attachment && <a href={message.attachment.url} target="_blank" rel="noreferrer" className="mt-2 flex items-center gap-3 rounded-2xl border border-[#e4e4e4] bg-white px-3 py-2 text-xs text-[#333333] hover:border-[#999999]"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f1f1f1]">{message.attachment.contentType.startsWith("image/") ? <img src={message.attachment.url} alt="" className="h-8 w-8 rounded-xl object-cover" /> : <FileText size={16} />}</span><span className="min-w-0 truncate">{message.attachment.fileName}</span></a>}
                     {message.imageUrl && <div className="mt-3 overflow-hidden rounded-[20px] border border-[#e7d9d0] bg-white shadow-sm"><img src={message.imageUrl} alt="تصویر تولیدشده از مانیکا" className="max-h-[560px] w-full object-cover" /><div className="flex items-center justify-between px-3 py-2 text-[11px] text-[#666666]"><span>تصویر تولیدشده با هویت بصری مانیکا</span><a href={message.imageUrl} target="_blank" rel="noreferrer" className="font-medium text-[#222222] hover:underline">باز کردن تصویر</a></div></div>}
-                    {message.role === "assistant" && message.id !== "welcome" && <div className="mt-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100"><button onClick={() => copyMessage(message)} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="کپی"><span className="sr-only">کپی</span>{copiedId === message.id ? <Check size={14} /> : <Copy size={14} />}</button></div>}
+                    {message.role === "assistant" && message.id !== "welcome" && <div className="mt-2 flex flex-wrap items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"><button onClick={() => copyMessage(message)} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="کپی"><span className="sr-only">کپی</span>{copiedId === message.id ? <Check size={14} /> : <Copy size={14} />}</button>{message.audioUrl ? <><audio controls src={message.audioUrl} className="h-8 max-w-[220px]" aria-label="پخش پاسخ صوتی" /><a href={message.audioUrl} download={`manika-${message.id}.mp3`} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="دانلود صوت" aria-label="دانلود پاسخ صوتی"><Download size={14} /></a></> : <button onClick={() => generateAudio(message)} disabled={audioLoadingId !== null} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-[#777777] hover:bg-[#f2f2f2] disabled:opacity-50" title="تولید و پخش صوت"><Volume2 size={14} />{audioLoadingId === message.id ? "در حال ساخت..." : "پخش صوت"}</button>}</div>}
                   </div>
                 </div>)}
                 {chatMutation.isPending && <div className="flex gap-3"><div className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl bg-[#e5e5e5] text-[#222222]"><Sparkles size={15} className="animate-pulse" /></div><div className="rounded-[20px] rounded-tl-md bg-[#f3f3f3] px-5 py-4"><div className="flex gap-1.5"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777] [animation-delay:-0.2s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777] [animation-delay:-0.1s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777]" /></div></div></div>}

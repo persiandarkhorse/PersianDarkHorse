@@ -107,4 +107,14 @@ describe("manika.chat", () => {
     expect(result).toMatchObject({ fileName: "notes.txt", contentType: "text/plain", size: 5 });
     expect(storagePutMock).toHaveBeenCalledOnce();
   });
+
+  it("generates audio through Speechify without exposing the provider key", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ audio_data: "YXVkaW8=", audio_format: "mp3" }), { status: 200 })));
+    const caller = appRouter.createCaller(createContext());
+    const result = await caller.manika.speech({ text: "سلام مانیکا", voiceId: "sabrina", model: "simba-3.2" });
+
+    expect(result).toEqual({ audioBase64: "YXVkaW8=", contentType: "audio/mpeg" });
+    expect(fetch).toHaveBeenCalledWith("https://api.speechify.ai/v1/audio/speech", expect.objectContaining({ method: "POST" }));
+    vi.unstubAllGlobals();
+  });
 });
