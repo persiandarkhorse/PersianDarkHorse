@@ -1,0 +1,286 @@
+[
+  {
+    "name": "Open-Meteo",
+    "url": "https://api.open-meteo.com/v1/forecast?latitude=35.7&longitude=51.4&current=temperature_2m",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "REST Countries",
+    "url": "https://restcountries.com/v3.1/all",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Open Food Facts",
+    "url": "https://world.openfoodfacts.org/api/v2/product/737628064502.json",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "CoinGecko",
+    "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Frankfurter",
+    "url": "https://api.frankfurter.app/latest?from=USD&to=EUR",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Nager.Date",
+    "url": "https://date.nager.at/api/v3/NextPublicHolidays/US",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Open Library",
+    "url": "https://openlibrary.org/search.json?q=the+little+prince",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "JSONPlaceholder",
+    "url": "https://jsonplaceholder.typicode.com/posts/1",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "httpbin",
+    "url": "https://httpbin.org/get",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Jikan",
+    "url": "https://api.jikan.moe/v4/anime?q=naruto",
+    "status": "error",
+    "ok": false,
+    "error": "HTTP Error 504: Gateway Time-out"
+  },
+  {
+    "name": "Quran Cloud",
+    "url": "https://api.alquran.cloud/v1/surah/1",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Gutendex",
+    "url": "https://gutendex.com/books?search=shakespeare",
+    "status": "error",
+    "ok": false,
+    "error": "The read operation timed out"
+  },
+  {
+    "name": "Iconify",
+    "url": "https://api.iconify.design/collection?prefix=mdi",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "IPify",
+    "url": "https://api.ipify.org?format=json",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Agify",
+    "url": "https://api.agify.io?name=fezi",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Genderize",
+    "url": "https://api.genderize.io?name=alex",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Nationalize",
+    "url": "https://api.nationalize.io?name=alex",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Dog CEO",
+    "url": "https://dog.ceo/api/breeds/image/random",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "The Cat API",
+    "url": "https://api.thecatapi.com/v1/images/search",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Cat Facts",
+    "url": "https://catfact.ninja/fact",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "PokeAPI",
+    "url": "https://pokeapi.co/api/v2/pokemon/pikachu",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Rick and Morty",
+    "url": "https://rickandmortyapi.com/api/character/1",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "SWAPI",
+    "url": "https://swapi.dev/api/people/1/",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Studio Ghibli",
+    "url": "https://ghibliapi.vercel.app/films",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "TheMealDB",
+    "url": "https://www.themealdb.com/api/json/v1/1/search.php?s=pasta",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "TheCocktailDB",
+    "url": "https://www.thecocktaildb.com/api/json/v1/1/search.php?s=margarita",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Open Brewery DB",
+    "url": "https://api.openbrewerydb.org/v1/breweries?by_city=seattle",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Bored API",
+    "url": "https://bored-api.appbrewery.com/random",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Advice Slip",
+    "url": "https://api.adviceslip.com/advice",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Kanye REST",
+    "url": "https://api.kanye.rest",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Quotable",
+    "url": "https://api.quotable.io/random",
+    "status": "error",
+    "ok": false,
+    "error": "<urlopen error [Errno -3] Temporary failure in name resolution>"
+  },
+  {
+    "name": "ZenQuotes",
+    "url": "https://zenquotes.io/api/random",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Chuck Norris",
+    "url": "https://api.chucknorris.io/jokes/random",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Evil Insult",
+    "url": "https://evilinsult.com/generate_insult.php?lang=en&type=json",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "YesNo",
+    "url": "https://yesno.wtf/api",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Numbers API",
+    "url": "http://numbersapi.com/42/trivia?json",
+    "status": "error",
+    "ok": false,
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "name": "Universities",
+    "url": "http://universities.hipolabs.com/search?country=Iran",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "World Time",
+    "url": "https://worldtimeapi.org/api/timezone/Asia/Tehran",
+    "status": "error",
+    "ok": false,
+    "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
+  },
+  {
+    "name": "ip-api",
+    "url": "http://ip-api.com/json",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Nominatim",
+    "url": "https://nominatim.openstreetmap.org/search?q=Tehran&format=jsonv2",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "USGS",
+    "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "NOAA",
+    "url": "https://api.weather.gov/points/39.7456,-97.0892",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "Sunrise-Sunset",
+    "url": "https://api.sunrise-sunset.org/json?lat=35.7&lng=51.4&formatted=0",
+    "status": 200,
+    "ok": true
+  },
+  {
+    "name": "NASA",
+    "url": "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY",
+    "status": "error",
+    "ok": false,
+    "error": "HTTP Error 500: Internal Server Error"
+  },
+  {
+    "name": "OpenAQ",
+    "url": "https://api.openaq.org/v3/locations?limit=1",
+    "status": "error",
+    "ok": false,
+    "error": "HTTP Error 401: Unauthorized"
+  },
+  {
+    "name": "Kroki",
+    "url": "https://kroki.io/mermaid/svg/eNqLU0jOzy0oSi0uzs9TKEktLgYAQh4G7Q",
+    "status": "error",
+    "ok": false,
+    "error": "HTTP Error 400: Bad Request"
+  }
+]

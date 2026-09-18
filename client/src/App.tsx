@@ -10,6 +10,7 @@ import Subscription from "./pages/Subscription";
 import API from "./pages/API";
 import Onboarding from "./pages/Onboarding";
 import Legal from "./pages/Legal";
+import FreeAPIs from "./pages/FreeAPIs";
 
 function HomeGate() {
   const [, navigate] = useLocation();
@@ -28,6 +29,7 @@ function Router() {
       <Route path={"/legal"} component={Legal} />
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/api"} component={API} />
+      <Route path={"/api/free"} component={FreeAPIs} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
