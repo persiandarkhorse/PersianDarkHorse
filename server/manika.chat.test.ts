@@ -82,7 +82,7 @@ describe("manika.chat", () => {
       originalImageUrl: "https://example.com/manika-reference.png",
     });
 
-    expect(result).toEqual({ imageUrl: "/manus-storage/generated.png" });
+    expect(result).toEqual({ imageUrl: "/manus-storage/generated.png", engine: "FEZI Image Core" });
     expect(generateImageMock).toHaveBeenCalledOnce();
     expect(generateImageMock.mock.calls[0]?.[0].prompt).toContain("مانیکا");
     expect(generateImageMock.mock.calls[0]?.[0].originalImages).toEqual([{
