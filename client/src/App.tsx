@@ -1,18 +1,29 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Subscription from "./pages/Subscription";
 import API from "./pages/API";
+import Onboarding from "./pages/Onboarding";
+
+function HomeGate() {
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    if (!localStorage.getItem("fezi-account")) navigate("/welcome");
+  }, [navigate]);
+  return localStorage.getItem("fezi-account") ? <Home /> : null;
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={HomeGate} />
+      <Route path={"/welcome"} component={Onboarding} />
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/api"} component={API} />
       <Route path={"/404"} component={NotFound} />
