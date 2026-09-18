@@ -93,7 +93,6 @@ export default function Home() {
   const [deepThinking, setDeepThinking] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [micPermission, setMicPermission] = useState<"unknown" | "granted" | "denied">("unknown");
   const [language] = useState<"fa">("fa");
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
@@ -139,7 +138,6 @@ export default function Home() {
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      setMicPermission("denied");
       setUploadError("مرورگر شما از ضبط صدا پشتیبانی نمی‌کند.");
       return;
     }
@@ -159,10 +157,9 @@ export default function Home() {
         } catch { setUploadError("تبدیل ویس به متن انجام نشد. لطفاً دوباره امتحان کنید."); }
       };
       recorderRef.current = recorder;
-      setMicPermission("granted");
       recorder.start();
       setRecording(true);
-    } catch { setMicPermission("denied"); setUploadError("برای ارسال ویس، اجازهٔ دسترسی به میکروفن را در مرورگر تأیید کنید."); }
+    } catch { setUploadError("دسترسی به میکروفن داده نشد."); }
   }
 
   async function uploadFile(file: File) {
@@ -349,7 +346,7 @@ export default function Home() {
 
         {mobileMenuOpen && <button className="fixed inset-0 z-20 bg-[#000000]/20 backdrop-blur-sm lg:hidden" onClick={() => setMobileMenuOpen(false)} aria-label="بستن منو" />}
 
-        <main className="flex h-screen max-h-screen min-w-0 flex-1 flex-col overflow-hidden lg:min-h-0">
+        <main className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0">
           <header className="relative flex h-[78px] items-center justify-between border-b border-[#eeeeee] px-5 md:px-9">
             <div className="flex items-center gap-3">
               <button onClick={() => setMobileMenuOpen(true)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5] lg:hidden" aria-label="باز کردن منو"><Menu size={19} /></button>
@@ -360,8 +357,8 @@ export default function Home() {
             {moreMenuOpen && <div className="absolute left-5 top-[64px] z-40 w-64 rounded-2xl border border-[#ddd] bg-white p-2 shadow-xl" dir={language === "fa" ? "rtl" : "ltr"}><p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999]">{language === "fa" ? "Persian Dark Horse" : "FEZI workspace"}</p><Link href="/api" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><Code2 size={16} />{language === "fa" ? "APIهای ما" : "Our APIs"}</Link><Link href="/welcome" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><UserCircle size={16} />{language === "fa" ? "پنل شخصی و انتخاب ایجنت" : "Personal panel & agents"}</Link><Link href="/welcome?tab=connectors" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><PlugZap size={16} />اتصال‌ها</Link><Link href="/welcome?tab=skills" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><WandSparkles size={16} />مهارت‌ها</Link><button onClick={() => { clearChat(); setMoreMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><Settings2 size={16} />{language === "fa" ? "مدیریت و تنظیمات" : "Management & settings"}</button></div>}
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
-            <div className="mx-auto w-full max-w-3xl">
+          <div className="flex-1 overflow-y-auto px-5 py-8 md:px-12 lg:px-20">
+            <div className="mx-auto max-w-3xl">
               <div className="mb-10 flex items-center gap-4 border-b border-[#eeeeee] pb-8">
                 <div className="relative h-16 w-16 overflow-hidden rounded-[22px] bg-[#000000] shadow-md shadow-[#8f6f5c]/15"><img src={officialPortrait} alt="مانیکا" className="h-full w-full object-cover object-top" /></div>
                 <div><p className="font-serif text-2xl font-semibold tracking-tight">سلام، من مانیکا هستم.</p><p className="mt-1 text-sm text-[#666666]">ایده‌هایت را با هم به چیزی ماندگار تبدیل کنیم.</p></div>
@@ -393,7 +390,7 @@ export default function Home() {
               {attachment && <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-xs"><span className="flex min-w-0 items-center gap-2"><FileText size={15} /><span className="truncate">{attachment.fileName}</span></span><button onClick={() => setAttachment(null)} className="rounded-lg p-1 text-[#777777] hover:bg-[#f2f2f2]" aria-label="حذف فایل پیوست"><X size={15} /></button></div>}
               <div onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }} onDragLeave={() => setIsDraggingFile(false)} onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); handleFiles(event.dataTransfer.files); }} className={`rounded-[24px] border bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] transition focus-within:ring-4 focus-within:ring-[#dddddd]/40 ${isDraggingFile ? "border-[#111111] bg-[#fafafa] ring-4 ring-[#dddddd]" : "border-[#e5e5e5] focus-within:border-[#888888]"}`}>
                 <Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="پیامت را برای مانیکا بنویس..." className="min-h-[54px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 shadow-none focus-visible:ring-0" dir="auto" />
-                <div className="relative flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-1 text-[#777777]"><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]" aria-label="ارسال پیام"><ArrowUp size={17} /></Button><span className="hidden text-[10px] text-[#999999] sm:block">{micPermission === "denied" ? "اجازهٔ میکروفن لازم است" : recording ? "در حال ضبط ویس..." : `${messageCount} پیام`}</span></div><div className="flex items-center gap-1"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className="rounded-xl p-2 text-[#777] hover:bg-[#f5efeb]" title="گالری" aria-label="انتخاب تصویر از گالری"><ImageIcon size={18} /></button><button onClick={() => setSkillsOpen((value) => !value)} className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${skillsOpen ? "bg-black text-white" : "text-[#777] hover:bg-[#f5efeb]"}`} title="مهارت‌ها و کارها" aria-label="باز کردن مهارت‌ها و کارها" aria-expanded={skillsOpen}>+</button><button onClick={() => void toggleRecording()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${recording ? "bg-[#111111] text-white" : ""}`} title={recording ? "توقف ضبط ویس" : micPermission === "denied" ? "اجازهٔ میکروفن رد شده؛ برای تلاش دوباره کلیک کنید" : "برای ضبط ویس کلیک کنید و اجازهٔ میکروفن بدهید"} aria-label={recording ? "توقف ضبط ویس" : "درخواست دسترسی به میکروفن و ضبط ویس"}><Mic size={18} /></button></div>{skillsOpen && <div className="absolute bottom-12 right-1 z-30 w-64 rounded-2xl border border-[#ddd] bg-white p-3 shadow-xl"><p className="text-xs font-semibold">مهارت‌ها و کارها</p><div className="mt-2 grid grid-cols-2 gap-2">{["تفکر عمیق", "جست‌وجوی وب", "تولید تصویر", "مدیریت محتوا"].map((skill) => <button key={skill} onClick={() => { if (skill === "تفکر عمیق") setDeepThinking((value) => !value); if (skill === "جست‌وجوی وب") setWebSearch((value) => !value); setSkillsOpen(false); }} className="rounded-xl bg-[#f5f5f3] px-2 py-2 text-[10px] hover:bg-[#e9e9e7]">{skill}</button>)}</div></div>}</div>
+                <div className="relative flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-1 text-[#777777]"><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]" aria-label="ارسال پیام"><ArrowUp size={17} /></Button><span className="hidden text-[10px] text-[#999999] sm:block">{messageCount} پیام</span></div><div className="flex items-center gap-1"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className="rounded-xl p-2 text-[#777] hover:bg-[#f5efeb]" title="گالری" aria-label="انتخاب تصویر از گالری"><ImageIcon size={18} /></button><button onClick={() => setSkillsOpen((value) => !value)} className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${skillsOpen ? "bg-black text-white" : "text-[#777] hover:bg-[#f5efeb]"}`} title="مهارت‌ها و کارها" aria-label="باز کردن مهارت‌ها و کارها" aria-expanded={skillsOpen}>+</button><button onClick={() => void toggleRecording()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${recording ? "bg-[#111111] text-white" : ""}`} title={recording ? "توقف ضبط ویس" : "ضبط و ارسال ویس"} aria-label={recording ? "توقف ضبط ویس" : "ضبط و ارسال ویس"}><Mic size={18} /></button></div>{skillsOpen && <div className="absolute bottom-12 right-1 z-30 w-64 rounded-2xl border border-[#ddd] bg-white p-3 shadow-xl"><p className="text-xs font-semibold">مهارت‌ها و کارها</p><div className="mt-2 grid grid-cols-2 gap-2">{["تفکر عمیق", "جست‌وجوی وب", "تولید تصویر", "مدیریت محتوا"].map((skill) => <button key={skill} onClick={() => { if (skill === "تفکر عمیق") setDeepThinking((value) => !value); if (skill === "جست‌وجوی وب") setWebSearch((value) => !value); setSkillsOpen(false); }} className="rounded-xl bg-[#f5f5f3] px-2 py-2 text-[10px] hover:bg-[#e9e9e7]">{skill}</button>)}</div></div>}</div>
               </div>
               <p className="mt-3 text-center text-[10px] text-[#999999]">مانیکا ممکن است اشتباه کند؛ برای تصمیم‌های مهم، اطلاعات را بررسی کن.</p>
               <p className="mt-2 text-center text-[10px] text-[#b0b0b0]">FEZI AI · Persian Dark Horse</p>
