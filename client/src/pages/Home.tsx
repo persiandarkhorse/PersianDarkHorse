@@ -14,6 +14,8 @@ import {
   Download,
   Globe2,
   BrainCircuit,
+  Languages,
+  Code2,
   Instagram,
   Mail,
   Image as ImageIcon,
@@ -28,6 +30,9 @@ import {
   Send,
   Volume2,
   WandSparkles,
+  PlugZap,
+  Settings2,
+  UserCircle,
   X,
 } from "lucide-react";
 
@@ -86,6 +91,8 @@ export default function Home() {
   const [deepThinking, setDeepThinking] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [language, setLanguage] = useState<"fa" | "en">(() => localStorage.getItem("fezi-language") === "en" ? "en" : "fa");
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePanelOpen, setImagePanelOpen] = useState(false);
@@ -108,6 +115,12 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("manika-chat-history", JSON.stringify(messages));
   }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem("fezi-language", language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "fa" ? "rtl" : "ltr";
+  }, [language]);
 
   const canSend = (input.trim().length > 0 || Boolean(attachment)) && !chatMutation.isPending && !uploadMutation.isPending;
   const canGenerateImage = imagePrompt.trim().length > 2 && !imageMutation.isPending;
@@ -328,12 +341,13 @@ export default function Home() {
         {mobileMenuOpen && <button className="fixed inset-0 z-20 bg-[#000000]/20 backdrop-blur-sm lg:hidden" onClick={() => setMobileMenuOpen(false)} aria-label="بستن منو" />}
 
         <main className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0">
-          <header className="flex h-[78px] items-center justify-between border-b border-[#eeeeee] px-5 md:px-9">
+          <header className="relative flex h-[78px] items-center justify-between border-b border-[#eeeeee] px-5 md:px-9">
             <div className="flex items-center gap-3">
               <button onClick={() => setMobileMenuOpen(true)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5] lg:hidden" aria-label="باز کردن منو"><Menu size={19} /></button>
-              <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {activeMode.label} <span className="mx-1 text-[#bbbbbb]">·</span> گفت‌وگوی خصوصی</p></div>
+              <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {language === "fa" ? activeMode.label : "Private conversation"}</p></div>
             </div>
-                <div className="flex items-center gap-1 text-[#666666]"><Link href="/api" className="rounded-xl px-3 py-2 text-[11px] hover:bg-[#f5f5f5]">APIهای ما</Link><button onClick={clearChat} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="پاک‌کردن گفت‌وگو"><MoreHorizontal size={19} /></button></div>
+            <div className="flex items-center gap-1 text-[#666666]"><button onClick={() => setLanguage((value) => value === "fa" ? "en" : "fa")} className="flex items-center gap-1 rounded-xl px-2.5 py-2 text-[11px] hover:bg-[#f5f5f5]" title="تغییر زبان" aria-label="تغییر زبان"><span className="text-base">{language === "fa" ? "🇮🇷" : "🇺🇸"}</span>{language === "fa" ? "FA" : "EN"}</button><button onClick={() => setMoreMenuOpen((value) => !value)} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="منوی بیشتر" aria-label="باز کردن منوی بیشتر" aria-expanded={moreMenuOpen}><MoreHorizontal size={19} /></button></div>
+            {moreMenuOpen && <div className="absolute left-5 top-[64px] z-40 w-64 rounded-2xl border border-[#ddd] bg-white p-2 shadow-xl" dir={language === "fa" ? "rtl" : "ltr"}><p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999]">{language === "fa" ? "Persian Dark Horse" : "FEZI workspace"}</p><Link href="/api" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><Code2 size={16} />{language === "fa" ? "APIهای ما" : "Our APIs"}</Link><Link href="/welcome" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><UserCircle size={16} />{language === "fa" ? "پنل شخصی و انتخاب ایجنت" : "Personal panel & agents"}</Link><Link href="/welcome?tab=connectors" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><PlugZap size={16} />Connectors</Link><Link href="/welcome?tab=skills" onClick={() => setMoreMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><WandSparkles size={16} />Skills</Link><button onClick={() => { clearChat(); setMoreMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-[#f5f5f5]"><Settings2 size={16} />{language === "fa" ? "مدیریت و تنظیمات" : "Management & settings"}</button></div>}
           </header>
 
           <div className="flex-1 overflow-y-auto px-5 py-8 md:px-12 lg:px-20">
