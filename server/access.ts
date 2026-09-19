@@ -1,18 +1,18 @@
 import { TRPCError } from "@trpc/server";
-import type { User } from "../drizzle/schema";
+import type { Subscription, User } from "../drizzle/schema";
 import { getSubscriptionByOpenId } from "./db";
 import { FREE_PLAN_ID, getPlan, PUBLIC_FREE_ACCESS, type Plan } from "../shared/plans";
 
 type AccessUser = Pick<User, "openId" | "role"> | null | undefined;
 
-export async function resolveAccess(user: AccessUser): Promise<{ plan: Plan; isAdmin: boolean; source: "admin" | "subscription" | "free" }> {
+export async function resolveAccess(user: AccessUser): Promise<{ plan: Plan; isAdmin: boolean; source: "admin" | "subscription" | "free"; subscription?: Subscription }> {
   if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "برای استفاده از FEZI AI ابتدا وارد حساب شوید." });
-  if (user.role === "admin") return { plan: getPlan("sovereign"), isAdmin: true, source: "admin" };
+  if (user.role === "admin") return { plan: getPlan("sovereign"), isAdmin: true, source: "admin", subscription: undefined };
   const subscription = await getSubscriptionByOpenId(user.openId);
   const active = subscription?.status === "active" && (subscription.isLifetime === 1 || !subscription.expiresAt || subscription.expiresAt.getTime() > Date.now());
   return active
-    ? { plan: getPlan(subscription?.planId), isAdmin: false, source: "subscription" }
-    : { plan: getPlan(FREE_PLAN_ID), isAdmin: false, source: "free" };
+    ? { plan: getPlan(subscription?.planId), isAdmin: false, source: "subscription", subscription }
+    : { plan: getPlan(FREE_PLAN_ID), isAdmin: false, source: "free", subscription };
 }
 
 export function canAccessAgent(plan: Plan, agentId: string) {

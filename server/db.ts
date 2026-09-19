@@ -119,6 +119,21 @@ export async function createPaymentSubmission(payment: InsertPaymentSubmission) 
   return result;
 }
 
+export async function listPaymentSubmissionsForUser(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: paymentSubmissions.id,
+    planId: paymentSubmissions.planId,
+    amount: paymentSubmissions.amount,
+    currency: paymentSubmissions.currency,
+    txid: paymentSubmissions.txid,
+    memo: paymentSubmissions.memo,
+    status: paymentSubmissions.status,
+    createdAt: paymentSubmissions.createdAt,
+  }).from(paymentSubmissions).where(eq(paymentSubmissions.userOpenId, userOpenId)).orderBy(desc(paymentSubmissions.createdAt));
+}
+
 export async function listApiCredentials() {
   const db = await getDb();
   if (!db) return [];

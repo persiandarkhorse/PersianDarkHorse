@@ -6,7 +6,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import { invokeLLM, type Message } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
-import { createPaymentSubmission, deleteApiCredential, getApiCredentialSecret, getSubscriptionByOpenId, listApiCredentials, saveApiCredential, upsertSubscription } from "./db";
+import { createPaymentSubmission, deleteApiCredential, getApiCredentialSecret, listApiCredentials, listPaymentSubmissionsForUser, saveApiCredential, upsertSubscription } from "./db";
 import { storagePut } from "./storage";
 import { buildAgentRuntimePrompt, getCapabilityBindings } from "./capabilityRouter";
 import { invokeRouteway, ROUTEWAY_FREE_MODELS, ROUTEWAY_DEEPSEEK_MODEL } from "./routeway";
@@ -75,11 +75,12 @@ export const appRouter = router({
   subscription: router({
     me: protectedProcedure.query(async ({ ctx }) => {
       const access = await resolveAccess(ctx.user);
-      return { plan: access.plan, isAdmin: access.isAdmin, source: access.source };
+      return { plan: access.plan, isAdmin: access.isAdmin, source: access.source, subscription: access.subscription ?? null };
     }),
     plans: publicProcedure.query(() => PLANS),
   }),
   payment: router({
+    history: protectedProcedure.query(async ({ ctx }) => listPaymentSubmissionsForUser(ctx.user.openId)),
     submitTxid: protectedProcedure
       .input(z.object({ planId: z.string().refine((value): value is PlanId => Boolean(getPlan(value)), "پلن نامعتبر است."), amount: z.string().regex(/^\d+(\.\d{1,8})?$/).max(64), currency: z.string().min(2).max(64), txid: z.string().min(8).max(256), memo: z.string().max(256).optional() }))
       .mutation(async ({ input, ctx }) => {
