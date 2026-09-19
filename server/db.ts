@@ -1,6 +1,6 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { apiCredentials, InsertApiCredential, InsertPaymentSubmission, InsertSubscription, InsertUser, paymentSubmissions, subscriptions, users } from "../drizzle/schema";
+import { apiCredentials, InsertApiCredential, InsertPaymentSubmission, InsertSubscription, InsertUser, paymentSubmissions, subscriptions, userApiCredentials, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { decryptSecret, encryptSecret, secretLast4 } from './secretVault';
 
@@ -145,6 +145,37 @@ export async function listApiCredentials() {
     createdAt: apiCredentials.createdAt,
     updatedAt: apiCredentials.updatedAt,
   }).from(apiCredentials).orderBy(desc(apiCredentials.updatedAt));
+}
+
+export async function listUserApiCredentials(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: userApiCredentials.id, provider: userApiCredentials.provider, label: userApiCredentials.label, lastFour: userApiCredentials.lastFour, createdAt: userApiCredentials.createdAt, updatedAt: userApiCredentials.updatedAt }).from(userApiCredentials).where(eq(userApiCredentials.userOpenId, userOpenId)).orderBy(desc(userApiCredentials.updatedAt));
+}
+
+export async function saveUserApiCredential(input: { userOpenId: string; provider: string; label: string; secret: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available.");
+  const trimmedSecret = input.secret.trim();
+  if (!trimmedSecret) throw new Error("API Key cannot be empty.");
+  const encrypted = encryptSecret(trimmedSecret);
+  const provider = input.provider.trim();
+  const existing = await db.select().from(userApiCredentials).where(eq(userApiCredentials.userOpenId, input.userOpenId));
+  const match = existing.find((item) => item.provider === provider);
+  const values = { userOpenId: input.userOpenId, provider, label: input.label.trim(), ciphertext: encrypted.ciphertext, iv: encrypted.iv, authTag: encrypted.authTag, lastFour: secretLast4(trimmedSecret) };
+  if (match) {
+    await db.update(userApiCredentials).set({ ...values, updatedAt: new Date() }).where(eq(userApiCredentials.id, match.id));
+    return match.id;
+  }
+  const result = await db.insert(userApiCredentials).values(values);
+  return Number(result[0].insertId);
+}
+
+export async function deleteUserApiCredential(userOpenId: string, id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available.");
+  await db.delete(userApiCredentials).where(and(eq(userApiCredentials.id, id), eq(userApiCredentials.userOpenId, userOpenId)));
+  return { deleted: true };
 }
 
 export async function saveApiCredential(input: { id?: number; provider: string; label: string; secret: string }) {

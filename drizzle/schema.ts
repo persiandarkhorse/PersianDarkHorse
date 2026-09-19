@@ -55,6 +55,22 @@ export const apiCredentials = mysqlTable("api_credentials", {
 export type ApiCredential = typeof apiCredentials.$inferSelect;
 export type InsertApiCredential = typeof apiCredentials.$inferInsert;
 
+export const userApiCredentials = mysqlTable("user_api_credentials", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  provider: varchar("provider", { length: 80 }).notNull(),
+  label: varchar("label", { length: 120 }).notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: varchar("iv", { length: 64 }).notNull(),
+  authTag: varchar("authTag", { length: 64 }).notNull(),
+  lastFour: varchar("lastFour", { length: 8 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserApiCredential = typeof userApiCredentials.$inferSelect;
+export type InsertUserApiCredential = typeof userApiCredentials.$inferInsert;
+
 export const subscriptions = mysqlTable("subscriptions", {
   id: int("id").autoincrement().primaryKey(),
   userOpenId: varchar("userOpenId", { length: 64 }).notNull().unique(),

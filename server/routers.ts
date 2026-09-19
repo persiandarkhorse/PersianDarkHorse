@@ -6,7 +6,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import { invokeLLM, type Message } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
-import { createPaymentSubmission, deleteApiCredential, getApiCredentialSecret, listApiCredentials, listPaymentSubmissionsForUser, saveApiCredential, upsertSubscription } from "./db";
+import { createPaymentSubmission, deleteApiCredential, deleteUserApiCredential, getApiCredentialSecret, listApiCredentials, listPaymentSubmissionsForUser, listUserApiCredentials, saveApiCredential, saveUserApiCredential, upsertSubscription } from "./db";
 import { storagePut } from "./storage";
 import { buildAgentRuntimePrompt, getCapabilityBindings } from "./capabilityRouter";
 import { invokeRouteway, ROUTEWAY_FREE_MODELS, ROUTEWAY_DEEPSEEK_MODEL } from "./routeway";
@@ -118,6 +118,16 @@ export const appRouter = router({
       return { plan: access.plan, isAdmin: access.isAdmin, source: access.source, subscription: access.subscription ?? null };
     }),
     plans: publicProcedure.query(() => PLANS),
+    videoCredentials: protectedProcedure.query(async ({ ctx }) => listUserApiCredentials(ctx.user.openId)),
+    saveVideoCredential: protectedProcedure
+      .input(z.object({ provider: z.enum(["Runway", "Seedance"]), secret: z.string().min(8).max(4000) }))
+      .mutation(async ({ input, ctx }) => {
+        const id = await saveUserApiCredential({ userOpenId: ctx.user.openId, provider: input.provider, label: `${input.provider} شخصی`, secret: input.secret });
+        return { id, saved: true };
+      }),
+    deleteVideoCredential: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => deleteUserApiCredential(ctx.user.openId, input.id)),
   }),
   payment: router({
     history: protectedProcedure.query(async ({ ctx }) => listPaymentSubmissionsForUser(ctx.user.openId)),

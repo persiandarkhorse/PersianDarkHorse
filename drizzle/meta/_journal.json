@@ -36,6 +36,13 @@
       "when": 1789801578267,
       "tag": "0004_flawless_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1789804652333,
+      "tag": "0005_clean_moonstone",
+      "breakpoints": true
     }
   ]
 }
