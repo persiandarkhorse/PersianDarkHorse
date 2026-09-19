@@ -64,11 +64,13 @@ const modes: Mode[] = [
   { label: "دستیار فنی", description: "وب، کد و ایده‌های محصول", icon: Sparkles },
 ];
 
-const starters = [
-  "مانیکا، امروز چه محتوایی برای اینستاگرامم بسازم؟",
-  "یک ایدهٔ پرترهٔ سینمایی برای مانیکا پیشنهاد بده.",
-  "برای یک برند عطر، یک سناریوی ریلز کوتاه بنویس.",
-];
+const agentStarters: Record<string, string[]> = {
+  manika: ["برای امروز یک ایدهٔ محتوایی خلاقانه پیشنهاد بده.", "یک ایدهٔ پرترهٔ سینمایی برای مانیکا بساز.", "برای یک برند عطر، سناریوی ریلز کوتاه بنویس."],
+  fezi: ["برای یک ایدهٔ خام، نقشهٔ اجرای عملی طراحی کن.", "این مسئله را تحلیل کن و بهترین راه‌حل را پیشنهاد بده.", "برای ساخت یک محصول جدید، برنامهٔ مرحله‌به‌مرحله بنویس."],
+  arvin: ["برای کسب‌وکار من یک مدل درآمدی پیشنهاد بده.", "یک قیف فروش و برنامهٔ مارکتینگ طراحی کن.", "رقبا و فرصت‌های رشد این ایده را تحلیل کن."],
+  arta: ["یک معمای جذاب و مرموز برایم طراحی کن.", "یک داستان تعاملی بساز و انتخاب اول را به من بده.", "یک بازی کوتاه حدس شخصیت شروع کنیم."],
+  negar: ["این ایده را به یک محصول قابل ساخت تبدیل کن.", "برای این پروژه معماری فنی و stack مناسب پیشنهاد بده.", "یک نمونهٔ اولیهٔ React برای این قابلیت طراحی کن."],
+};
 
 function loadAgentChats(): Record<string, ChatMessage[]> {
   try { return JSON.parse(localStorage.getItem("fezi-agent-chats") ?? "{}") as Record<string, ChatMessage[]>; } catch { return {}; }
@@ -426,7 +428,7 @@ export default function Home() {
                 {chatMutation.isPending && <div className="flex gap-3"><div className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl bg-[#e5e5e5] text-[#222222]"><Sparkles size={15} className="animate-pulse" /></div><div className="rounded-[20px] rounded-tl-md bg-[#f3f3f3] px-5 py-4"><div className="flex gap-1.5"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777] [animation-delay:-0.2s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777] [animation-delay:-0.1s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777]" /></div></div></div>}
               </div>
 
-              {messages.length === 1 && <div className="mt-10 grid gap-2.5 sm:grid-cols-3">{starters.map((starter) => <button key={starter} onClick={() => sendMessage(starter)} className="rounded-2xl border border-[#e9dfd8] bg-white px-4 py-3 text-right text-xs leading-5 text-[#776960] transition hover:-translate-y-0.5 hover:border-[#bbbbbb] hover:shadow-md">{starter}</button>)}</div>}
+              {messages.length === 1 && <div className="mt-10 grid gap-2.5 sm:grid-cols-3">{(agentStarters[activeAgent.id] ?? agentStarters.manika).map((starter) => <button key={starter} onClick={() => sendMessage(starter)} className="rounded-2xl border border-[#e9dfd8] bg-white px-4 py-3 text-right text-xs leading-5 text-[#776960] transition hover:-translate-y-0.5 hover:border-[#bbbbbb] hover:shadow-md">{starter}</button>)}</div>}
             </div>
           </div>
 
