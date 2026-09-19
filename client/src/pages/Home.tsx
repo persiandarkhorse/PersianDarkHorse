@@ -70,6 +70,20 @@ const starters = [
   "برای یک برند عطر، یک سناریوی ریلز کوتاه بنویس.",
 ];
 
+function loadAgentChats(): Record<string, ChatMessage[]> {
+  try { return JSON.parse(localStorage.getItem("fezi-agent-chats") ?? "{}") as Record<string, ChatMessage[]>; } catch { return {}; }
+}
+
+function initialAgentMessages(agentId: string): ChatMessage[] {
+  const saved = loadAgentChats()[agentId];
+  if (saved?.length) return saved;
+  if (agentId === "manika") {
+    try { const legacy = localStorage.getItem("manika-chat-history"); if (legacy) return JSON.parse(legacy) as ChatMessage[]; } catch { /* use welcome */ }
+  }
+  const agent = homeAgents.find((item) => item.id === agentId) ?? homeAgents[0];
+  return agentWelcome(agent);
+}
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -99,12 +113,9 @@ function initialMessages(): ChatMessage[] {
 
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const stored = localStorage.getItem("manika-chat-history");
-      return stored ? JSON.parse(stored) : initialMessages();
-    } catch {
-      return initialMessages();
-    }
+    const storedIndex = Number(localStorage.getItem("fezi-agent-index") ?? 0);
+    const agent = homeAgents[storedIndex] ?? homeAgents[0];
+    return initialAgentMessages(agent.id);
   });
   const [input, setInput] = useState("");
   const [activeMode, setActiveMode] = useState(modes[0]);
@@ -131,9 +142,12 @@ export default function Home() {
 
   function switchAgent(index: number) {
     const next = (index + homeAgents.length) % homeAgents.length;
+    const chats = loadAgentChats();
+    chats[activeAgent.id] = messages;
+    localStorage.setItem("fezi-agent-chats", JSON.stringify(chats));
     setAgentIndex(next);
     localStorage.setItem("fezi-agent-index", String(next));
-    setMessages(agentWelcome(homeAgents[next]));
+    setMessages(initialAgentMessages(homeAgents[next].id));
     setInput("");
     setAttachment(null);
     setUploadError(null);
@@ -149,8 +163,11 @@ export default function Home() {
   const recordingChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    localStorage.setItem("manika-chat-history", JSON.stringify(messages));
-  }, [messages]);
+    const chats = loadAgentChats();
+    chats[activeAgent.id] = messages;
+    localStorage.setItem("fezi-agent-chats", JSON.stringify(chats));
+    if (activeAgent.id === "manika") localStorage.setItem("manika-chat-history", JSON.stringify(messages));
+  }, [messages, activeAgent.id]);
 
   useEffect(() => {
     document.documentElement.lang = "fa";
@@ -383,7 +400,7 @@ export default function Home() {
               <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {activeAgent.name} · {language === "fa" ? activeMode.label : "Private conversation"}</p></div>
             </div>
             <div className="flex items-center gap-1 text-[#666666]"><button onClick={() => setAgentDrawerOpen((value) => !value)} className="rounded-xl px-3 py-2 text-[11px] hover:bg-[#f5f5f5]" aria-expanded={agentDrawerOpen}>{language === "fa" ? "Agentها" : "Agents"}</button><button onClick={() => setMoreMenuOpen((value) => !value)} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="منوی بیشتر" aria-label="باز کردن منوی بیشتر" aria-expanded={moreMenuOpen}><MoreHorizontal size={19} /></button></div>
-            {agentDrawerOpen && <div className="absolute right-5 top-[64px] z-40 w-[350px] rounded-3xl border border-[#ddd] bg-white p-4 shadow-2xl" role="dialog" aria-label="انتخاب ایجنت"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold">انتخاب ایجنت</p><p className="mt-1 text-[10px] text-[#888]">ایجنت فعال را همین‌جا تغییر دهید</p></div><Link href="/welcome" className="text-[10px] underline">مشاهدهٔ پروفایل‌ها</Link></div><div className="mt-4 flex items-center gap-2"><button onClick={() => { const next = (agentIndex + homeAgents.length - 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت قبلی"><ArrowRight size={17} /></button><button onClick={() => { setAgentDrawerOpen(false); }} className="min-w-0 flex-1 rounded-2xl bg-[#f7f7f5] p-3 text-center hover:bg-[#efefed]" aria-label={`انتخاب ${activeAgent.name}`}><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="mx-auto h-14 w-14 rounded-2xl object-cover" /><p className="mt-2 text-sm font-semibold">{activeAgent.name}</p><p className="mt-1 text-[10px] text-[#888]">رایگان · {activeAgent.role}</p></button><button onClick={() => { const next = (agentIndex + 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت بعدی"><ArrowLeft size={17} /></button></div><div className="mt-3 grid grid-cols-5 gap-1.5">{homeAgents.map((agent, index) => <button key={agent.id} onClick={() => { switchAgent(index); }} className={`rounded-xl p-1.5 text-center ${index === agentIndex ? "bg-black text-white" : "bg-[#f5f5f3] hover:bg-[#e9e9e7]"}`} aria-label={`انتخاب ${agent.name}`} aria-pressed={index === agentIndex}><img src={agent.image} alt="" className="mx-auto h-8 w-8 rounded-lg object-cover" /><span className="mt-1 block truncate text-[9px]">{agent.name}</span></button>)}</div></div>}
+            {agentDrawerOpen && <div className="absolute right-5 top-[64px] z-40 w-[350px] rounded-3xl border border-[#ddd] bg-white p-4 shadow-2xl" role="dialog" aria-label="انتخاب ایجنت"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold">انتخاب ایجنت</p><p className="mt-1 text-[10px] text-[#888]">ایجنت فعال را همین‌جا تغییر دهید</p></div><Link href="/welcome" className="text-[10px] underline">مشاهدهٔ پروفایل‌ها</Link></div><div className="mt-4 flex items-center gap-2"><button onClick={() => { const next = (agentIndex + homeAgents.length - 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت قبلی"><ArrowRight size={17} /></button><button onClick={() => { setAgentDrawerOpen(false); }} className="min-w-0 flex-1 rounded-2xl bg-[#f7f7f5] p-3 text-center hover:bg-[#efefed]" aria-label={`انتخاب ${activeAgent.name}`}><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="mx-auto h-14 w-14 rounded-2xl object-cover" /><p className="mt-2 text-sm font-semibold">{activeAgent.name}</p><p className="mt-1 text-[10px] text-[#888]">رایگان · {activeAgent.role}</p></button><button onClick={() => { const next = (agentIndex + 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت بعدی"><ArrowLeft size={17} /></button></div><div className="mt-3 grid grid-cols-5 gap-1.5">{homeAgents.map((agent, index) => <button key={agent.id} onClick={() => { switchAgent(index); }} className={`rounded-xl p-1.5 text-center ${index === agentIndex ? "bg-black text-white" : "bg-[#f5f5f3] hover:bg-[#e9e9e7]"}`} aria-label={`انتخاب ${agent.name}`} aria-pressed={index === agentIndex}><img src={agent.image} alt="" className="mx-auto h-8 w-8 rounded-lg object-cover" /><span className="mt-1 block truncate text-[9px]">{agent.name}</span></button>)}</div><div className="mt-4 border-t border-[#e7e7e5] pt-3"><p className="text-[10px] font-semibold text-[#666]">تاریخچهٔ جداگانهٔ گفتگوها</p><div className="mt-2 space-y-1.5">{homeAgents.map((agent, index) => { const count = loadAgentChats()[agent.id]?.filter((message) => message.role === "user").length ?? 0; return <button key={`history-${agent.id}`} onClick={() => switchAgent(index)} className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-right text-[10px] hover:bg-[#f4f4f2] ${index === agentIndex ? "bg-[#f4f4f2]" : ""}`}><span className="flex items-center gap-2"><img src={agent.image} alt="" className="h-6 w-6 rounded-lg object-cover" />{agent.name}</span><span className="text-[#999]">{count} پیام</span></button>; })}</div></div></div>}
           </header>
 
           <div className="flex-1 overflow-y-auto px-5 py-8 md:px-12 lg:px-20">
