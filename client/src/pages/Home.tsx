@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { agentProfiles } from "../../../shared/agentProfiles";
@@ -22,6 +22,12 @@ import {
   Instagram,
   Mail,
   Image as ImageIcon,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  BookOpen,
+  SlidersHorizontal,
+  Users,
   Menu,
   Mic,
   MessageCircle,
@@ -114,6 +120,7 @@ function initialMessages(): ChatMessage[] {
 }
 
 export default function Home() {
+  const [, navigate] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const storedIndex = Number(localStorage.getItem("fezi-agent-index") ?? 0);
     const agent = homeAgents[storedIndex] ?? homeAgents[0];
@@ -132,6 +139,7 @@ export default function Home() {
   const activeModes = agentModes[activeAgent.id] ?? modes;
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [leftNavOpen, setLeftNavOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePanelOpen, setImagePanelOpen] = useState(false);
   const [imageMode, setImageMode] = useState<"generate" | "edit">("generate");
@@ -350,6 +358,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#ffffff] text-[#111111] selection:bg-[#e5e5e5]/50">
       <div className="mx-auto flex min-h-screen max-w-[1560px] overflow-hidden bg-[#ffffff] shadow-[0_20px_80px_rgba(65,45,35,0.08)] lg:min-h-[calc(100vh-32px)] lg:my-4 lg:rounded-[30px]">
+        {leftNavOpen && <button className="fixed inset-0 z-40 bg-black/25 backdrop-blur-sm" onClick={() => setLeftNavOpen(false)} aria-label="بستن منوی اصلی" />}
+        <aside className={`fixed inset-y-0 left-0 z-50 w-[292px] border-r border-[#e5e5e5] bg-[#fafaf8] p-5 shadow-2xl transition-transform duration-200 ${leftNavOpen ? "translate-x-0" : "-translate-x-full"}`} aria-label="منوی اصلی FEZI AI">
+          <div className="flex items-center justify-between border-b border-[#e8e8e5] pb-5"><div><p className="font-serif text-lg font-semibold">FEZI AI</p><p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#888]">Persian Dark Horse</p></div><button onClick={() => setLeftNavOpen(false)} className="rounded-xl p-2 text-[#777] hover:bg-white" aria-label="بستن منو"><X size={17} /></button></div>
+          <div className="mt-5 rounded-2xl bg-white p-3 shadow-sm"><div className="flex items-center gap-3"><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="h-10 w-10 rounded-xl object-cover" /><div><p className="text-xs font-semibold">{activeAgent.name}</p><p className="mt-1 text-[10px] text-[#888]">ایجنت فعال</p></div></div></div>
+          <nav className="mt-5 space-y-1.5">
+            <Link href="/" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl bg-black px-3 py-3 text-sm font-medium text-white"><LayoutDashboard size={17} /> داشبورد</Link>
+            <Link href="/welcome" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><Users size={17} /> ایجنت‌ها</Link>
+            <Link href="/welcome?tab=skills" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><Settings2 size={17} /> تنظیمات</Link>
+            <Link href="/welcome?tab=agents" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><SlidersHorizontal size={17} /> شخصی‌سازی</Link>
+            <Link href="/api/free" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><BookOpen size={17} /> پایگاه دانش</Link>
+            <Link href="/welcome?tab=connectors" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><PlugZap size={17} /> Connectors</Link>
+          </nav>
+          <div className="mt-6 border-t border-[#e5e5e5] pt-5"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999]">حساب کاربری</p><Link href="/welcome" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl bg-[#edf7ee] px-3 py-3 text-sm font-medium text-[#286b35] hover:bg-[#e3f2e5]"><LogIn size={17} /> ورود به حساب</Link><button onClick={() => { localStorage.removeItem("fezi-account"); localStorage.removeItem("fezi-remember"); navigate("/welcome"); setLeftNavOpen(false); }} className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#fff0f0] px-3 py-3 text-right text-sm font-medium text-[#a62f2f] hover:bg-[#ffe5e5]"><LogOut size={17} /> خروج از حساب</button></div>
+          <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-[#e3e3df] bg-white p-3 text-[10px] leading-5 text-[#888]">تنظیمات و انتخاب‌های شما برای ایجنت فعال ذخیره می‌شود.</div>
+        </aside>
         <aside className={`fixed inset-y-0 right-0 z-30 w-[290px] border-l border-[#e5e5e5] bg-[#f7f7f7] p-5 transition-transform duration-200 lg:static lg:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -412,7 +435,7 @@ export default function Home() {
         <main className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0">
           <header className="relative flex h-[78px] items-center justify-between border-b border-[#eeeeee] px-5 md:px-9">
             <div className="flex items-center gap-3">
-              <button onClick={() => setMobileMenuOpen(true)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5] lg:hidden" aria-label="باز کردن منو"><Menu size={19} /></button>
+              <button onClick={() => setLeftNavOpen(true)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5]" aria-label="باز کردن منوی اصلی"><Menu size={19} /></button>
               <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {activeAgent.name} · {language === "fa" ? activeMode.label : "Private conversation"}</p></div>
             </div>
             <div className="flex items-center gap-1 text-[#666666]"><button onClick={() => setAgentDrawerOpen((value) => !value)} className="rounded-xl px-3 py-2 text-[11px] hover:bg-[#f5f5f5]" aria-expanded={agentDrawerOpen}>{language === "fa" ? "Agentها" : "Agents"}</button><button onClick={() => setMoreMenuOpen((value) => !value)} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="منوی بیشتر" aria-label="باز کردن منوی بیشتر" aria-expanded={moreMenuOpen}><MoreHorizontal size={19} /></button></div>
