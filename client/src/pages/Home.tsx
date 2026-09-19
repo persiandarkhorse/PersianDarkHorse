@@ -58,6 +58,20 @@ const toolCatalog = [
   { id: "prompt", label: "نوشتن Prompt", icon: WandSparkles, providers: ["FEZI Prompt Skill · Jasper-style", "ChatGPT", "Claude Fable", "Mistral"] },
 ] as const;
 
+const creationRatios = ["1:1", "16:9", "9:16", "4:5", "4:3"];
+const creationQualities = ["Draft", "Standard", "High", "Ultra"];
+const creationDurations = ["5 ثانیه", "10 ثانیه", "15 ثانیه", "30 ثانیه", "60 ثانیه"];
+const creationFormats = ["PNG", "JPG", "WEBP", "PDF", "DOCX", "ZIP"];
+const creationToolNotes: Record<string, string> = {
+  video: "مدت‌زمان، نسبت تصویر، کیفیت و سبک خروجی ویدیو را مشخص کنید.",
+  file: "نوع فایل، کیفیت متن و قالب نهایی سند را مشخص کنید.",
+  website: "نسبت تصویر پیش‌نمایش، کیفیت طراحی و stack پروژه را مشخص کنید.",
+  app: "پلتفرم، کیفیت معماری و خروجی اولیه برنامه را مشخص کنید.",
+  image: "نسبت تصویر و کیفیت رندر را پیش از ورود به استودیوی تصویر تعیین کنید.",
+  pdf: "اندازه صفحه، کیفیت خروجی و فرمت سند PDF را مشخص کنید.",
+  prompt: "لحن، کیفیت جزئیات و قالب پرامپت نهایی را مشخص کنید.",
+};
+
 const homeAgents = agentProfiles.map((agent) => ({
   ...agent,
   detail: agent.description,
@@ -165,6 +179,12 @@ export default function Home() {
   }, [subscriptionQuery.data?.plan.id, subscriptionQuery.data?.isAdmin]);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [toolMenuOpen, setToolMenuOpen] = useState<string | null>(null);
+  const [creationSettings, setCreationSettings] = useState<{ toolId: string; provider: string } | null>(null);
+  const [creationRatio, setCreationRatio] = useState("16:9");
+  const [creationQuality, setCreationQuality] = useState("High");
+  const [creationDuration, setCreationDuration] = useState("10 ثانیه");
+  const [creationFormat, setCreationFormat] = useState("PNG");
+  const [imageGenerationSettings, setImageGenerationSettings] = useState({ ratio: "1:1", quality: "High", duration: "10 ثانیه" });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [leftNavOpen, setLeftNavOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -179,17 +199,25 @@ export default function Home() {
   const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
 
   function selectCreationTool(toolId: string, provider: string) {
-    if (toolId === "image") {
-      setImageEngine(provider);
+    setCreationSettings({ toolId, provider });
+    if (toolId === "image") setImageEngine(provider);
+    setToolMenuOpen(null);
+  }
+
+  function applyCreationSettings() {
+    if (!creationSettings) return;
+    const tool = toolCatalog.find((item) => item.id === creationSettings.toolId);
+    const config = `نسبت تصویر: ${creationRatio} | کیفیت: ${creationQuality} | مدت خروجی: ${creationDuration} | فرمت: ${creationFormat}`;
+    if (creationSettings.toolId === "image") {
+      setImageGenerationSettings({ ratio: creationRatio, quality: creationQuality, duration: creationDuration });
       setImagePanelOpen(true);
-      setToolMenuOpen(null);
+      setCreationSettings(null);
       setSkillsOpen(false);
       return;
     }
-    const tool = toolCatalog.find((item) => item.id === toolId);
-    const task = `می‌خواهم با ابزار «${provider}» ${tool?.label ?? "این کار"} را انجام بدهم. لطفاً ابتدا نیازمندی‌ها، خروجی و مراحل لازم را آماده کن.`;
+    const task = `می‌خواهم با ابزار «${creationSettings.provider}» ${tool?.label ?? "این کار"} را انجام بدهم. تنظیمات انتخابی: ${config}. لطفاً ابتدا نیازمندی‌ها، خروجی و مراحل لازم را آماده کن.`;
     setInput((current) => current.trim() ? `${current.trim()}\n\n${task}` : task);
-    setToolMenuOpen(null);
+    setCreationSettings(null);
     setSkillsOpen(false);
   }
 
@@ -381,6 +409,9 @@ export default function Home() {
         mode: imageMode,
         imageType,
         engine: imageEngine,
+        aspectRatio: imageGenerationSettings.ratio,
+        quality: imageGenerationSettings.quality,
+        duration: imageGenerationSettings.duration,
         prompt,
         ...(imageType === "manika" ? { originalImageUrl: new URL(officialPortrait, window.location.origin).toString() } : {}),
       });
@@ -554,7 +585,8 @@ export default function Home() {
 
           <div className="px-5 pb-5 pt-2 md:px-12 lg:px-20">
             <div className="mx-auto max-w-3xl">
-              {imagePanelOpen && <div className="mb-3 rounded-[22px] border border-[#e5e5e5] bg-[#fffdfb] p-4 shadow-[0_8px_24px_rgba(91,62,46,0.06)]"><label className="mb-3 block text-[11px] font-semibold">موتور تولید تصویر<select value={imageEngine} onChange={(event) => setImageEngine(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[#e5e5e5] bg-white px-3 text-xs"><option>FEZI Image Core</option><option>Seedance 2</option><option>Kling AI</option><option>ChatGPT Image</option><option>Claude Fable Visual</option><option>GapGPT Image</option></select></label><div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold text-[#4a3b34]">استودیوی تصویر</p><p className="mt-1 text-[11px] text-[#777777]">حالت ساخت را انتخاب کنید و توصیف صحنه را بنویسید.</p></div><button onClick={() => setImagePanelOpen(false)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5]" aria-label="بستن استودیو"><X size={16} /></button></div><div className="mb-3 grid grid-cols-2 gap-2"><button onClick={() => { setImageType("general"); setImageMode("generate"); }} className={`rounded-xl px-3 py-2 text-xs ${imageType === "general" ? "bg-[#000000] text-white" : "bg-[#f1f1f1] text-[#555555]"}`}>ساخت تصویر کلی</button><button onClick={() => setImageType("manika")} className={`rounded-xl px-3 py-2 text-xs ${imageType === "manika" ? "bg-[#000000] text-white" : "bg-[#f1f1f1] text-[#555555]"}`}>ساخت مخصوص مانیکا</button></div>{imageType === "manika" && <div className="mb-3 flex gap-2"><button onClick={() => setImageMode("generate")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "generate" ? "bg-[#e5e5e5] text-[#111111]" : "bg-[#f1f1f1] text-[#666666]"}`}>تولید تصویر مانیکا</button><button onClick={() => setImageMode("edit")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "edit" ? "bg-[#e5e5e5] text-[#111111]" : "bg-[#f1f1f1] text-[#666666]"}`}>ویرایش پرتره رسمی</button></div>}<Textarea value={imagePrompt} onChange={(event) => setImagePrompt(event.target.value)} placeholder={imageType === "general" ? "مثلاً: یک منظرهٔ سینمایی از تهران در شب..." : imageMode === "edit" ? "مثلاً: پس‌زمینه را به یک کافهٔ پاریسی در ساعت طلایی تبدیل کن..." : "مثلاً: مانیکا در یک گالری هنری مدرن، کت مشکی و نور پنجره..."} className="min-h-[82px] resize-none rounded-2xl border-[#e5e5e5] bg-white text-sm leading-6" dir="rtl" /><div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-[#777777]">تولید تصویر ممکن است چند ثانیه زمان ببرد.</span><Button onClick={generateManikaImage} disabled={!canGenerateImage} className="rounded-xl bg-[#000000] text-white hover:bg-[#222222] disabled:bg-[#e5e5e5]"><Sparkles size={15} className="ml-2" />{imageMutation.isPending ? "در حال ساخت..." : imageType === "general" ? "ساخت تصویر کلی" : imageMode === "edit" ? "ویرایش تصویر مانیکا" : "ساخت تصویر مانیکا"}</Button></div></div>}
+              {creationSettings && <div className="mb-3 rounded-[22px] border border-black/15 bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,.08)]" role="dialog" aria-label="تنظیمات تخصصی ابزار"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold">تنظیمات {toolCatalog.find((item) => item.id === creationSettings.toolId)?.label}</p><p className="mt-1 text-[10px] text-[#777]">موتور انتخاب‌شده: <strong>{creationSettings.provider}</strong></p><p className="mt-1 text-[10px] leading-5 text-[#888]">{creationToolNotes[creationSettings.toolId]}</p></div><button onClick={() => setCreationSettings(null)} className="rounded-lg p-1.5 text-[#777] hover:bg-[#f2f2f0]" aria-label="بستن تنظیمات"><X size={15} /></button></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-medium">نسبت تصویر<select value={creationRatio} onChange={(event) => setCreationRatio(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-[#ddd] bg-white px-2 text-xs">{creationRatios.map((value) => <option key={value}>{value}</option>)}</select></label><label className="text-[10px] font-medium">کیفیت خروجی<select value={creationQuality} onChange={(event) => setCreationQuality(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-[#ddd] bg-white px-2 text-xs">{creationQualities.map((value) => <option key={value}>{value}</option>)}</select></label><label className="text-[10px] font-medium">مدت زمان خروجی<select value={creationDuration} onChange={(event) => setCreationDuration(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-[#ddd] bg-white px-2 text-xs">{creationDurations.map((value) => <option key={value}>{value}</option>)}</select></label><label className="text-[10px] font-medium">فرمت فایل<select value={creationFormat} onChange={(event) => setCreationFormat(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-[#ddd] bg-white px-2 text-xs">{creationFormats.map((value) => <option key={value}>{value}</option>)}</select></label></div><div className="mt-4 flex items-center justify-between gap-3"><span className="text-[10px] text-[#888]">این تنظیمات همراه درخواست به {activeAgent.name} ارسال می‌شود.</span><button onClick={applyCreationSettings} className="rounded-xl bg-black px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#222]">تأیید و ادامه</button></div></div>}
+{imagePanelOpen && <div className="mb-3 rounded-[22px] border border-[#e5e5e5] bg-[#fffdfb] p-4 shadow-[0_8px_24px_rgba(91,62,46,0.06)]"><label className="mb-3 block text-[11px] font-semibold">موتور تولید تصویر<select value={imageEngine} onChange={(event) => setImageEngine(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[#e5e5e5] bg-white px-3 text-xs"><option>FEZI Image Core</option><option>Seedance 2</option><option>Kling AI</option><option>ChatGPT Image</option><option>Claude Fable Visual</option><option>GapGPT Image</option></select></label><div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold text-[#4a3b34]">استودیوی تصویر</p><p className="mt-1 text-[11px] text-[#777777]">حالت ساخت را انتخاب کنید و توصیف صحنه را بنویسید.</p></div><button onClick={() => setImagePanelOpen(false)} className="rounded-xl p-2 text-[#666666] hover:bg-[#f5f5f5]" aria-label="بستن استودیو"><X size={16} /></button></div><div className="mb-3 grid grid-cols-2 gap-2"><button onClick={() => { setImageType("general"); setImageMode("generate"); }} className={`rounded-xl px-3 py-2 text-xs ${imageType === "general" ? "bg-[#000000] text-white" : "bg-[#f1f1f1] text-[#555555]"}`}>ساخت تصویر کلی</button><button onClick={() => setImageType("manika")} className={`rounded-xl px-3 py-2 text-xs ${imageType === "manika" ? "bg-[#000000] text-white" : "bg-[#f1f1f1] text-[#555555]"}`}>ساخت مخصوص مانیکا</button></div>{imageType === "manika" && <div className="mb-3 flex gap-2"><button onClick={() => setImageMode("generate")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "generate" ? "bg-[#e5e5e5] text-[#111111]" : "bg-[#f1f1f1] text-[#666666]"}`}>تولید تصویر مانیکا</button><button onClick={() => setImageMode("edit")} className={`rounded-xl px-3 py-2 text-xs ${imageMode === "edit" ? "bg-[#e5e5e5] text-[#111111]" : "bg-[#f1f1f1] text-[#666666]"}`}>ویرایش پرتره رسمی</button></div>}<Textarea value={imagePrompt} onChange={(event) => setImagePrompt(event.target.value)} placeholder={imageType === "general" ? "مثلاً: یک منظرهٔ سینمایی از تهران در شب..." : imageMode === "edit" ? "مثلاً: پس‌زمینه را به یک کافهٔ پاریسی در ساعت طلایی تبدیل کن..." : "مثلاً: مانیکا در یک گالری هنری مدرن، کت مشکی و نور پنجره..."} className="min-h-[82px] resize-none rounded-2xl border-[#e5e5e5] bg-white text-sm leading-6" dir="rtl" /><div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-[#777777]">تولید تصویر ممکن است چند ثانیه زمان ببرد.</span><Button onClick={generateManikaImage} disabled={!canGenerateImage} className="rounded-xl bg-[#000000] text-white hover:bg-[#222222] disabled:bg-[#e5e5e5]"><Sparkles size={15} className="ml-2" />{imageMutation.isPending ? "در حال ساخت..." : imageType === "general" ? "ساخت تصویر کلی" : imageMode === "edit" ? "ویرایش تصویر مانیکا" : "ساخت تصویر مانیکا"}</Button></div></div>}
               {uploadError && <div className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{uploadError}</div>}
               {attachment && <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-xs"><span className="flex min-w-0 items-center gap-2"><FileText size={15} /><span className="truncate">{attachment.fileName}</span></span><button onClick={() => setAttachment(null)} className="rounded-lg p-1 text-[#777777] hover:bg-[#f2f2f2]" aria-label="حذف فایل پیوست"><X size={15} /></button></div>}
               <div onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }} onDragLeave={() => setIsDraggingFile(false)} onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); handleFiles(event.dataTransfer.files); }} className={`rounded-[24px] border bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] transition focus-within:ring-4 focus-within:ring-[#dddddd]/40 ${isDraggingFile ? "border-[#111111] bg-[#fafafa] ring-4 ring-[#dddddd]" : "border-[#e5e5e5] focus-within:border-[#888888]"}`}>
