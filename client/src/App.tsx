@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -21,7 +21,27 @@ function HomeGate() {
 }
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
+  const [location] = useLocation();
+  const historyGuardReady = useRef(false);
+
+  useEffect(() => {
+    if (historyGuardReady.current) return;
+    historyGuardReady.current = true;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.history.pushState({ ...(window.history.state ?? {}), feziRootGuard: true }, "", currentUrl);
+    window.history.pushState({ ...(window.history.state ?? {}), feziInternalPage: true }, "", currentUrl);
+    const handleBackNavigation = () => {
+      // The root guard is a same-document history entry. Re-push the current
+      // page so Back cannot cross the FEZI boundary into the referring site.
+      if (window.history.state?.feziRootGuard) {
+        window.history.pushState({ feziInternalPage: true }, "", currentUrl);
+      }
+    };
+
+    window.addEventListener("popstate", handleBackNavigation);
+    return () => window.removeEventListener("popstate", handleBackNavigation);
+  }, [location]);
+
   return (
     <Switch>
       <Route path={"/"} component={HomeGate} />
