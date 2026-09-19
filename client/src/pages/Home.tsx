@@ -370,7 +370,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#ffffff] text-[#111111] selection:bg-[#e5e5e5]/50">
       <div className="mx-auto flex min-h-screen max-w-[1560px] overflow-hidden bg-[#ffffff] shadow-[0_20px_80px_rgba(65,45,35,0.08)] lg:min-h-[calc(100vh-32px)] lg:my-4 lg:rounded-[30px]">
         {leftNavOpen && <button className="fixed inset-0 z-40 bg-black/25 backdrop-blur-sm" onClick={() => setLeftNavOpen(false)} aria-label="بستن منوی اصلی" />}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-[292px] border-r border-[#e5e5e5] bg-[#fafaf8] p-5 shadow-2xl transition-transform duration-200 ${leftNavOpen ? "translate-x-0" : "-translate-x-full"}`} aria-label="منوی اصلی FEZI AI">
+        <aside className={`fixed inset-y-0 left-0 z-50 w-[292px] border-r border-[#e5e5e5] bg-[#fafaf8] p-5 shadow-2xl transition-transform duration-200 ${leftNavOpen ? "translate-x-0" : "-translate-x-full"}`} aria-label="منوی اصلی FEZI AI" data-drawer-side="left">
           <div className="flex items-center justify-between border-b border-[#e8e8e5] pb-5"><div><p className="font-serif text-lg font-semibold">FEZI AI</p><p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#888]">Persian Dark Horse</p></div><button onClick={() => setLeftNavOpen(false)} className="rounded-xl p-2 text-[#777] hover:bg-white" aria-label="بستن منو"><X size={17} /></button></div>
           <div className="mt-5 rounded-2xl bg-white p-3 shadow-sm"><div className="flex items-center gap-3"><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="h-10 w-10 rounded-xl object-cover" /><div><p className="text-xs font-semibold">{activeAgent.name}</p><p className="mt-1 text-[10px] text-[#888]">ایجنت فعال</p></div></div></div>
           <nav className="mt-5 space-y-1.5">
@@ -385,7 +385,7 @@ export default function Home() {
           <div className="mt-6 border-t border-[#e5e5e5] pt-5"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999]">حساب کاربری</p><Link href="/welcome" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl bg-[#edf7ee] px-3 py-3 text-sm font-medium text-[#286b35] hover:bg-[#e3f2e5]"><LogIn size={17} /> ورود به حساب</Link><button onClick={() => { localStorage.removeItem("fezi-account"); localStorage.removeItem("fezi-remember"); navigate("/welcome"); setLeftNavOpen(false); }} className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#fff0f0] px-3 py-3 text-right text-sm font-medium text-[#a62f2f] hover:bg-[#ffe5e5]"><LogOut size={17} /> خروج از حساب</button></div>
           <div className="mt-4 rounded-2xl border border-[#e3e3df] bg-white p-3 text-[10px] leading-5 text-[#888]">تنظیمات و انتخاب‌های شما برای ایجنت فعال ذخیره می‌شود.</div>
         </aside>
-        <aside id="fezi-agent-panel" className={`fixed inset-y-0 right-0 z-50 flex w-[min(360px,calc(100vw-24px))] flex-col overflow-y-auto border-l border-[#e5e5e5] bg-[#f7f7f7] p-5 shadow-2xl transition-transform duration-200 ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`} aria-label="پنل ایجنت فعال و تاریخچه گفتگو">
+        <aside id="fezi-agent-panel" className={`fixed inset-y-0 right-0 z-50 flex w-[min(360px,calc(100vw-24px))] flex-col overflow-y-auto border-l border-[#e5e5e5] bg-[#f7f7f7] p-5 shadow-2xl transition-transform duration-200 ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`} aria-label="پنل ایجنت فعال و تاریخچه گفتگو" data-drawer-side="right">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative h-11 w-11 overflow-hidden rounded-2xl bg-[#000000] ring-4 ring-white">
@@ -449,8 +449,8 @@ export default function Home() {
           </div>
 
           <div className="mt-4 rounded-2xl border border-[#dddddd] bg-white/70 p-4">
-            <div className="flex items-center gap-2 text-[#333333]"><Sparkles size={15} /><span className="text-xs font-semibold">هویت مانیکا فعال است</span></div>
-            <p className="mt-2 text-[11px] leading-5 text-[#9c8980]">چهره، لحن و نگاه خلاقانهٔ مانیکا در این فضا حفظ می‌شود.</p>
+            <div className="flex items-center gap-2 text-[#333333]"><Sparkles size={15} /><span className="text-xs font-semibold">هوش کاربری {activeAgent.name} فعال است</span></div>
+            <p className="mt-2 text-[11px] leading-5 text-[#9c8980]">شخصیت، لحن و قابلیت‌های {activeAgent.name} در این فضا فعال است.</p>
           </div>
         </aside>
 
