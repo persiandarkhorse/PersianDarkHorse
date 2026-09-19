@@ -41,10 +41,10 @@ import {
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 const homeAgents = [
   { id: "manika", name: "مانیکا", role: "خلاق و کارگردان", image: officialPortrait },
-  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", image: "/manus-storage/fezi-profile_6700801c.png" },
-  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", image: "/manus-storage/arvin-profile_01b8362e.png" },
-  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", image: "/manus-storage/arta-profile_122429d6.png" },
-  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", image: "/manus-storage/negar-profile_09832c50.png" },
+  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", image: "/manus-storage/fezi-reference_142ab3b4.png" },
+  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", image: "/manus-storage/arvin-reference_a9e918b0.png" },
+  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", image: "/manus-storage/arta-reference_b28c18c8.png" },
+  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", image: "/manus-storage/negar-reference_6025582a.png" },
 ];
 
 type Role = "user" | "assistant";
