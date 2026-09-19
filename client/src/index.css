@@ -41,3 +41,16 @@ button, textarea { font: inherit; }
   button, textarea { transition: color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out, transform 160ms ease-out; }
   button:active { transform: scale(.98); }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fezi-agent-slide-left {
+    from { opacity: 0; transform: translateX(18px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fezi-agent-slide-right {
+    from { opacity: 0; transform: translateX(-18px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .fezi-agent-slide-left { animation: fezi-agent-slide-left 220ms cubic-bezier(.23,1,.32,1); }
+  .fezi-agent-slide-right { animation: fezi-agent-slide-right 220ms cubic-bezier(.23,1,.32,1); }
+}
