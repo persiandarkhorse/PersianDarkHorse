@@ -261,7 +261,17 @@ export default function Home() {
 
     try {
       let responseContent: string;
+      let enabledConnectorIds: string[] = [];
+      try {
+        const connectorMap = JSON.parse(localStorage.getItem("fezi-agent-connectors") ?? "{}") as Record<string, string[]>;
+        enabledConnectorIds = connectorMap[activeAgent.id] ?? [];
+      } catch {
+        enabledConnectorIds = [];
+      }
       const result = await chatMutation.mutateAsync({
+        agentId: activeAgent.id,
+        capabilityIds: activeAgent.capabilities.map((capability) => capability.id),
+        enabledConnectorIds,
         mode: `${activeAgent.name} · ${activeMode.label}`,
         messages: nextMessages.slice(-12).map(({ role, content }) => ({ role, content })),
         deepThinking,

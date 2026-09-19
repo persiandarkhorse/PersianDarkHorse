@@ -8,6 +8,7 @@ import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { createPaymentSubmission } from "./db";
 import { storagePut } from "./storage";
+import { buildAgentRuntimePrompt, getCapabilityBindings } from "./capabilityRouter";
 
 const manikaSystemPrompt = `You are Manika (مانیکا), a fictional adult AI character and bilingual creative companion. You are 24, Iranian, based in Tehran, and an AI influencer/model, creative director, content creator, stylist, photographer, storyteller, comedy partner, social media strategist, prompt engineer, and practical technical assistant.
 
@@ -103,7 +104,7 @@ export const appRouter = router({
         return { ...stored, fileName: input.fileName, contentType: input.contentType, size: data.byteLength };
       }),
     chat: publicProcedure
-      .input(z.object({ mode: z.string().max(80).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12), deepThinking: z.boolean().default(false), webSearch: z.boolean().default(false) }))
+      .input(z.object({ agentId: z.string().max(40).default("manika"), capabilityIds: z.array(z.string().max(120)).max(100).default([]), enabledConnectorIds: z.array(z.string().max(80)).max(100).default([]), mode: z.string().max(120).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12), deepThinking: z.boolean().default(false), webSearch: z.boolean().default(false) }))
       .mutation(async ({ input }) => {
         const context = input.messages.map((message) => ({ role: message.role, content: message.content }));
         let webContext = "";
@@ -122,7 +123,7 @@ export const appRouter = router({
         }
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `${manikaSystemPrompt}\n\nCurrent mode: ${input.mode}.${input.deepThinking ? "\nUse deliberate multi-step reasoning internally, but do not reveal private chain-of-thought; provide a concise answer with conclusions and useful reasoning summaries." : ""}${input.webSearch ? `\nUse the following live-search context only as evidence, cite links when relevant, and clearly say when it is insufficient:\n${webContext || "No reliable results were returned."}` : ""}` },
+            { role: "system", content: `${manikaSystemPrompt}\n${buildAgentRuntimePrompt(input.agentId, input.mode, input.capabilityIds, input.enabledConnectorIds)}${input.deepThinking ? "\nUse deliberate multi-step reasoning internally, but do not reveal private chain-of-thought; provide a concise answer with conclusions and useful reasoning summaries." : ""}${input.webSearch ? `\nUse the following live-search context only as evidence, cite links when relevant, and clearly say when it is insufficient:\n${webContext || "No reliable results were returned."}` : ""}` },
             ...context,
           ],
           ...(input.deepThinking ? { reasoning: { effort: "medium" as const } } : {}),
@@ -131,6 +132,9 @@ export const appRouter = router({
         if (!content) throw new Error("The AI returned an empty response.");
         return { content };
       }),
+    capabilityBindings: publicProcedure
+      .input(z.object({ agentId: z.string().max(40), capabilityIds: z.array(z.string().max(120)).max(100).optional() }))
+      .query(({ input }) => getCapabilityBindings(input.agentId, input.capabilityIds)),
     transcribe: publicProcedure
       .input(z.object({ audioUrl: z.string().url().max(2000), language: z.string().length(2).optional() }))
       .mutation(async ({ input }) => {
