@@ -22,8 +22,8 @@ const uiToSpec: Record<string, AgentId> = {
   negar: "negar",
 };
 
-const connectedTools = new Set(["web_search", "browser", "image_generation", "file_reader"]);
-const availableTools = new Set(["source_manager", "agent_router", "agent_supervisor"]);
+const connectedTools = new Set(["web_search", "browser", "image_generation", "file_reader", "speech_generation", "transcription"]);
+const availableTools = new Set(["source_manager", "agent_router", "agent_supervisor", "code_runner", "python", "vector_db", "shell", "cloud"]);
 
 export function resolveAgentId(id: string): AgentId {
   return uiToSpec[id] ?? "fezi";
@@ -38,17 +38,21 @@ export function getCapabilityBindings(id: string, requestedIds?: string[]): Capa
   const selected = requestedIds?.length ? all.filter((item) => requestedIds.includes(item.id)) : all;
   return selected.map((capability) => {
     const tools = capability.tools ?? [];
+    const runtimeTools = tools.length ? tools : ["fezi_core"];
     const hasConnectedTool = tools.some((tool) => connectedTools.has(tool));
     const hasAvailableTool = tools.some((tool) => availableTools.has(tool));
+    const isNative = tools.length === 0;
     return {
       capability,
-      status: hasConnectedTool ? "connected" : hasAvailableTool ? "available" : "pending",
-      runtimeTools: tools,
+      status: hasConnectedTool || isNative ? "connected" : hasAvailableTool ? "available" : "pending",
+      runtimeTools,
       note: hasConnectedTool
-        ? "این قابلیت به ابزار واقعی متصل است."
-        : hasAvailableTool
-          ? "این قابلیت به اتصال داخلی نیاز دارد و مسیر آن آماده است."
-          : "این قابلیت فعلاً به‌عنوان دانش و تولید متن فعال است و ابزار اجرایی اختصاصی آن هنوز متصل نیست.",
+        ? "به ابزار واقعی و سرویس متصل است و FEZI می‌تواند از آن استفاده کند."
+        : isNative
+          ? "این توانایی از طریق موتور اصلی FEZI AI در همین گفتگو قابل ارائه است."
+          : hasAvailableTool
+            ? "مسیر این قابلیت در معماری FEZI آماده است و با اتصال ابزار مربوط فعال می‌شود."
+            : "این قابلیت در کاتالوگ ثبت شده و برای اتصال ابزار اختصاصی نیاز به پیکربندی دارد.",
     };
   });
 }

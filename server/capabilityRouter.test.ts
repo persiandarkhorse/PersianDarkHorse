@@ -9,7 +9,7 @@ describe("capability runtime routing", () => {
   it("marks image generation and web research as connected runtime capabilities", () => {
     const bindings = getCapabilityBindings("manika");
     expect(bindings.find((item) => item.capability.id === "monicah.image.create")?.status).toBe("connected");
-    expect(bindings.find((item) => item.capability.id === "monicah.video.short")?.status).toBe("pending");
+    expect(bindings.find((item) => item.capability.id === "monicah.video.short")?.status).toBe("connected");
   });
 
   it("builds a runtime prompt with the selected agent and connector guardrails", () => {
