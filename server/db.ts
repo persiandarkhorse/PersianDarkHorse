@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertPaymentSubmission, InsertUser, paymentSubmissions, users } from "../drizzle/schema";
+import { apiCredentials, InsertApiCredential, InsertPaymentSubmission, InsertUser, paymentSubmissions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { decryptSecret, encryptSecret, secretLast4 } from './secretVault';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -94,4 +95,55 @@ export async function createPaymentSubmission(payment: InsertPaymentSubmission) 
   if (!db) return undefined;
   const result = await db.insert(paymentSubmissions).values(payment);
   return result;
+}
+
+export async function listApiCredentials() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: apiCredentials.id,
+    provider: apiCredentials.provider,
+    label: apiCredentials.label,
+    lastFour: apiCredentials.lastFour,
+    createdAt: apiCredentials.createdAt,
+    updatedAt: apiCredentials.updatedAt,
+  }).from(apiCredentials).orderBy(desc(apiCredentials.updatedAt));
+}
+
+export async function saveApiCredential(input: { id?: number; provider: string; label: string; secret: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available.");
+  const trimmedSecret = input.secret.trim();
+  if (!trimmedSecret) throw new Error("API Key cannot be empty.");
+  const encrypted = encryptSecret(trimmedSecret);
+  const values: InsertApiCredential = {
+    provider: input.provider.trim(),
+    label: input.label.trim(),
+    ciphertext: encrypted.ciphertext,
+    iv: encrypted.iv,
+    authTag: encrypted.authTag,
+    lastFour: secretLast4(trimmedSecret),
+  };
+  if (input.id) {
+    await db.update(apiCredentials).set({ ...values, updatedAt: new Date() }).where(eq(apiCredentials.id, input.id));
+    return input.id;
+  }
+  const result = await db.insert(apiCredentials).values(values);
+  return Number(result[0].insertId);
+}
+
+export async function deleteApiCredential(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available.");
+  await db.delete(apiCredentials).where(eq(apiCredentials.id, id));
+  return { deleted: true };
+}
+
+/** Internal-only accessor for server integrations. Never return this from tRPC. */
+export async function getApiCredentialSecret(provider: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(apiCredentials).where(eq(apiCredentials.provider, provider)).limit(1);
+  const row = result[0];
+  return row ? decryptSecret({ ciphertext: row.ciphertext, iv: row.iv, authTag: row.authTag }) : undefined;
 }

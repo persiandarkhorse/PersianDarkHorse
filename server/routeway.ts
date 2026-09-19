@@ -1,4 +1,5 @@
 import type { Message } from "./_core/llm";
+import { getApiCredentialSecret } from "./db";
 
 export const ROUTEWAY_BASE_URL = "https://api.routeway.ai/v1";
 export const ROUTEWAY_DEEPSEEK_MODEL = "deepseek-v4-flash:free";
@@ -9,7 +10,7 @@ export const ROUTEWAY_FREE_MODELS = [
 ] as const;
 
 export async function invokeRouteway(messages: Message[], options?: { model?: string; reasoning?: boolean }) {
-  const apiKey = process.env.ROUTEWAY_API_KEY;
+  const apiKey = await getApiCredentialSecret("Routeway") ?? process.env.ROUTEWAY_API_KEY;
   if (!apiKey) throw new Error("Routeway is not configured.");
   const model = options?.model ?? ROUTEWAY_DEEPSEEK_MODEL;
   if (!ROUTEWAY_FREE_MODELS.some((item) => item.id === model)) throw new Error("مدل رایگان Routeway در فهرست مجاز نیست.");

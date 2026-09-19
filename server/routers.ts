@@ -2,11 +2,11 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, publicProcedure, router } from "./_core/trpc";
 import { invokeLLM, type Message } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
-import { createPaymentSubmission } from "./db";
+import { createPaymentSubmission, deleteApiCredential, getApiCredentialSecret, listApiCredentials, saveApiCredential } from "./db";
 import { storagePut } from "./storage";
 import { buildAgentRuntimePrompt, getCapabilityBindings } from "./capabilityRouter";
 import { invokeRouteway, ROUTEWAY_FREE_MODELS, ROUTEWAY_DEEPSEEK_MODEL } from "./routeway";
@@ -88,6 +88,23 @@ export const appRouter = router({
         return (await response.json()) as Record<string, { usd?: number }>;
       }),
   }),
+  admin: router({
+    credentials: adminProcedure.query(async () => listApiCredentials()),
+    saveCredential: adminProcedure
+      .input(z.object({
+        id: z.number().int().positive().optional(),
+        provider: z.string().trim().min(2).max(80),
+        label: z.string().trim().min(2).max(120),
+        secret: z.string().min(8).max(4000),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await saveApiCredential(input);
+        return { id, saved: true };
+      }),
+    deleteCredential: adminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input }) => deleteApiCredential(input.id)),
+  }),
   manika: router({
     uploadFile: publicProcedure
       .input(z.object({
@@ -157,7 +174,7 @@ export const appRouter = router({
     speech: publicProcedure
       .input(z.object({ text: z.string().min(1).max(2000), voiceId: z.string().min(1).max(120).default("sabrina"), model: z.string().min(1).max(80).default("simba-3.2") }))
       .mutation(async ({ input }) => {
-        const apiKey = process.env.SPEECHIFY_API_KEY;
+        const apiKey = await getApiCredentialSecret("Speechify") ?? process.env.SPEECHIFY_API_KEY;
         if (!apiKey) throw new Error("Speechify is not configured.");
         const response = await fetch("https://api.speechify.ai/v1/audio/speech", {
           method: "POST",

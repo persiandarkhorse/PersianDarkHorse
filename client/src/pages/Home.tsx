@@ -378,7 +378,7 @@ export default function Home() {
             <Link href="/welcome" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><Users size={17} /> ایجنت‌ها</Link>
             <Link href="/welcome?tab=skills" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><Settings2 size={17} /> تنظیمات</Link>
             <Link href="/welcome?tab=agents" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><SlidersHorizontal size={17} /> شخصی‌سازی</Link>
-            <Link href="/api" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><LayoutDashboard size={17} /> مدیریت / Admin</Link>
+            <Link href="/admin" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><LayoutDashboard size={17} /> مدیریت / Admin</Link>
             <Link href="/api/free" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><BookOpen size={17} /> پایگاه دانش</Link>
             <Link href="/welcome?tab=connectors" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><PlugZap size={17} /> Connectors</Link>
           </nav>

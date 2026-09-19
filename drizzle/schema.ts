@@ -37,3 +37,18 @@ export const paymentSubmissions = mysqlTable("payment_submissions", {
 
 export type PaymentSubmission = typeof paymentSubmissions.$inferSelect;
 export type InsertPaymentSubmission = typeof paymentSubmissions.$inferInsert;
+
+export const apiCredentials = mysqlTable("api_credentials", {
+  id: int("id").autoincrement().primaryKey(),
+  provider: varchar("provider", { length: 80 }).notNull(),
+  label: varchar("label", { length: 120 }).notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: varchar("iv", { length: 64 }).notNull(),
+  authTag: varchar("authTag", { length: 64 }).notNull(),
+  lastFour: varchar("lastFour", { length: 8 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApiCredential = typeof apiCredentials.$inferSelect;
+export type InsertApiCredential = typeof apiCredentials.$inferInsert;
