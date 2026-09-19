@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { AlertTriangle, ArrowRight, CheckCircle2, KeyRound, LockKeyhole, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Crown, KeyRound, LockKeyhole, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PLANS, type PlanId } from "../../../shared/plans";
 
 const providers = ["OpenRouter", "Routeway", "OpenAI", "Mistral", "Speechify", "xAI / Grok", "Ollama Cloud", "GapGPT", "Apify MCP", "سرویس سفارشی"];
 
@@ -19,6 +20,10 @@ function AdminCredentialsPage() {
     },
     onError: (error) => setFeedback({ kind: "error", text: error.message || "ذخیرهٔ کلید انجام نشد." }),
   });
+  const setSubscription = trpc.admin.setSubscription.useMutation({
+    onSuccess: () => setFeedback({ kind: "success", text: "اشتراک کاربر در backend فعال شد." }),
+    onError: (error) => setFeedback({ kind: "error", text: error.message || "فعال‌سازی اشتراک انجام نشد." }),
+  });
   const deleteCredential = trpc.admin.deleteCredential.useMutation({
     onSuccess: async () => {
       setFeedback({ kind: "success", text: "کلید از خزانهٔ امن حذف شد." });
@@ -28,6 +33,9 @@ function AdminCredentialsPage() {
   });
   const [draft, setDraft] = useState<CredentialDraft>({ provider: "OpenRouter", label: "", secret: "" });
   const [feedback, setFeedback] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [subscriberOpenId, setSubscriberOpenId] = useState("");
+  const [subscriptionPlanId, setSubscriptionPlanId] = useState<PlanId>("swift_rider");
+  const [subscriptionLifetime, setSubscriptionLifetime] = useState(false);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -57,6 +65,7 @@ function AdminCredentialsPage() {
         <div className="flex items-center gap-2 rounded-2xl border border-[#cfe5d1] bg-[#f1fbf2] px-4 py-3 text-xs text-[#256b2c]"><ShieldCheck size={17} /> فقط مدیران مجاز</div>
       </header>
 
+      <section className="mt-7 rounded-3xl border border-[#dededb] bg-white p-5 shadow-sm md:p-7" aria-labelledby="subscription-admin-title"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white"><Crown size={18} /></div><div><h2 id="subscription-admin-title" className="text-lg font-semibold">فعال‌سازی اشتراک کاربر</h2><p className="mt-1 text-xs text-[#888]">پس از بررسی TXID، entitlement را از اینجا فعال کنید. این عملیات فقط Admin است.</p></div></div><form onSubmit={(event) => { event.preventDefault(); if (!subscriberOpenId.trim()) return; setSubscription.mutate({ userOpenId: subscriberOpenId.trim(), planId: subscriptionPlanId, isLifetime: subscriptionLifetime, expiresAt: subscriptionLifetime ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }); }} className="mt-5 grid gap-3 md:grid-cols-[1.3fr_1fr_auto_auto]"><input value={subscriberOpenId} onChange={(event) => setSubscriberOpenId(event.target.value)} placeholder="شناسهٔ کاربر openId" required className="h-11 rounded-xl border border-[#ddd] px-3 text-sm outline-none focus:border-black" dir="ltr" /><select value={subscriptionPlanId} onChange={(event) => setSubscriptionPlanId(event.target.value as PlanId)} className="h-11 rounded-xl border border-[#ddd] bg-white px-3 text-sm">{PLANS.filter((plan) => plan.id !== "horse_rider").map((plan) => <option key={plan.id} value={plan.id}>{plan.nameFa} · {plan.price}</option>)}</select><label className="flex h-11 items-center gap-2 rounded-xl border border-[#ddd] px-3 text-xs"><input type="checkbox" checked={subscriptionLifetime} onChange={(event) => setSubscriptionLifetime(event.target.checked)} /> مادام‌العمر</label><button disabled={setSubscription.isPending} className="h-11 rounded-xl bg-black px-5 text-xs font-semibold text-white disabled:opacity-50">{setSubscription.isPending ? "در حال ذخیره..." : "فعال‌سازی"}</button></form></section>
       <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section className="rounded-3xl border border-[#dededb] bg-white p-5 shadow-sm md:p-7" aria-labelledby="credential-list-title">
           <div className="flex items-center justify-between gap-3"><div><h2 id="credential-list-title" className="text-lg font-semibold">کلیدهای ثبت‌شده</h2><p className="mt-1 text-xs text-[#888]">فقط نام، سرویس، چهار رقم آخر و زمان تغییر قابل مشاهده است.</p></div><button onClick={() => credentials.refetch()} className="rounded-xl border border-[#ddd] p-2.5 text-[#555] hover:bg-[#f5f5f3]" aria-label="به‌روزرسانی فهرست"><RefreshCw size={16} /></button></div>

@@ -1,0 +1,26 @@
+import { useState } from "react";
+import { Check, Crown, LockKeyhole, Sparkles } from "lucide-react";
+import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { PLANS, type PlanId } from "../../../shared/plans";
+
+export default function PlanSelector({ selectedPlanId, onSelect }: { selectedPlanId: PlanId; onSelect: (planId: PlanId) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const current = trpc.subscription.me.useQuery(undefined, { retry: false });
+  const activePlanId = current.data?.plan.id ?? "horse_rider";
+  return <section id="plans" className="mt-12" aria-labelledby="plans-title">
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.18em] text-black/45">FEZI AI PLANS</p><h2 id="plans-title" className="mt-2 text-3xl font-bold tracking-tight">انتخاب مسیر خودت</h2><p className="mt-2 text-sm leading-7 text-black/55">از اولین سوار تا فرمانروای دنیای هوش مصنوعی.</p></div><div className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs">پلن فعلی: <strong>{current.data?.plan.nameFa ?? "اسب‌سوار"}</strong></div></div>
+    {current.isError && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e8d9b1] bg-[#fffaf0] p-4 text-xs text-[#6b592c]"><span>برای ثبت TXID و فعال‌شدن اشتراک، ابتدا وارد حساب FEZI AI شوید.</span><Link href="/welcome" className="rounded-xl bg-black px-4 py-2 text-white">ورود / ثبت‌نام</Link></div>}
+    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{PLANS.map((plan) => { const active = plan.id === activePlanId; const selected = plan.id === selectedPlanId; return <article key={plan.id} className={`relative rounded-3xl border p-5 transition ${selected ? "border-black bg-black text-white shadow-xl" : "border-black/10 bg-white hover:border-black/35"} ${plan.id === "sovereign" ? "ring-1 ring-black/20" : ""}`}>
+      {plan.badge && <span className={`absolute -top-3 right-5 rounded-full px-3 py-1 text-[10px] font-bold ${selected ? "bg-white text-black" : "bg-black text-white"}`}>{plan.badge}</span>}
+      <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-bold">{plan.nameFa}</h3><p className={`mt-1 text-xs ${selected ? "text-white/55" : "text-black/45"}`}>{plan.nameEn}</p></div>{plan.id === "sovereign" ? <Crown size={21} /> : plan.id === "swift_rider" ? <Sparkles size={21} /> : <LockKeyhole size={19} />}</div>
+      <p className={`mt-5 text-2xl font-bold ${selected ? "text-white" : "text-black"}`}>{plan.price} <span className={`text-xs font-normal ${selected ? "text-white/55" : "text-black/45"}`}>{plan.billing === "monthly" ? "/ ماه" : plan.billing === "lifetime" ? "یک‌بار پرداخت" : "/ ماه"}</span></p>
+      <p className={`mt-3 min-h-10 text-xs leading-5 ${selected ? "text-white/65" : "text-black/55"}`}>{plan.summary}</p>
+      <div className="mt-4 space-y-2">{plan.features.map((feature) => <p key={feature} className={`flex gap-2 text-[11px] ${selected ? "text-white/75" : "text-black/65"}`}><Check size={14} className="mt-0.5 shrink-0" />{feature}</p>)}</div>
+      <button type="button" onClick={() => onSelect(plan.id)} className={`mt-5 h-10 w-full rounded-xl text-xs font-semibold transition ${selected ? "bg-white text-black hover:bg-white/85" : "bg-black text-white hover:bg-black/80"}`}>{active ? "پلن فعلی" : selected ? "انتخاب شد" : plan.billing === "free" ? "شروع رایگان" : `انتخاب ${plan.nameFa}`}</button>
+    </article>; })}</div>
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-black/[.025] p-4 text-xs text-black/55"><span>پلن انتخابی برای ثبت TXID: <strong className="text-black">{PLANS.find((plan) => plan.id === selectedPlanId)?.nameFa}</strong></span><button type="button" onClick={() => setExpanded((value) => !value)} className="underline">{expanded ? "بستن مقایسه" : "مقایسه امکانات"}</button></div>
+    {expanded && <div className="mt-4 overflow-x-auto rounded-2xl border border-black/10 bg-white"><table className="w-full min-w-[760px] text-right text-xs"><thead><tr className="border-b border-black/10">{["قابلیت", ...PLANS.map((plan) => plan.nameFa)].map((label) => <th key={label} className="p-3 font-semibold">{label}</th>)}</tr></thead><tbody>{["manika", "arta", "arvin", "negar", "fezi", "Research", "Multi-Agent", "Deep Research"].map((feature) => <tr key={feature} className="border-b border-black/5 last:border-0"><td className="p-3 font-medium">{feature === "manika" ? "مانیکا" : feature === "arta" ? "آرتا" : feature === "arvin" ? "آروین" : feature === "negar" ? "نگار" : feature === "fezi" ? "FEZI" : feature}</td>{PLANS.map((plan) => <td key={plan.id} className="p-3 text-black/65">{["manika", "arta", "arvin", "negar", "fezi"].includes(feature) ? (plan.agents.includes(feature) ? "✓" : "🔒") : plan.features.some((item) => item.toLowerCase().includes(feature.toLowerCase())) ? "✓" : "—"}</td>)}</tr>)}</tbody></table></div>}
+    <p className="mt-3 text-[10px] leading-5 text-black/45">اعتبار اشتراک، دسترسی Agentها و ابزارها را در backend کنترل می‌کند. Lifetime فقط دسترسی FEZI را دائمی می‌کند و هزینهٔ متغیر سرویس‌های شخص ثالث ممکن است جداگانه مدیریت شود.</p>
+  </section>;
+}

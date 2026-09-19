@@ -12,13 +12,17 @@ import Onboarding from "./pages/Onboarding";
 import Legal from "./pages/Legal";
 import FreeAPIs from "./pages/FreeAPIs";
 import Admin from "./pages/Admin";
+import Account from "./pages/Account";
+import { trpc } from "./lib/trpc";
 
 function HomeGate() {
   const [, navigate] = useLocation();
+  const serverUser = trpc.auth.me.useQuery(undefined, { retry: false });
+  const localAccount = Boolean(localStorage.getItem("fezi-account"));
   useEffect(() => {
-    if (!localStorage.getItem("fezi-account")) navigate("/welcome");
-  }, [navigate]);
-  return localStorage.getItem("fezi-account") ? <Home /> : null;
+    if (!serverUser.isLoading && !serverUser.data && !localAccount) navigate("/welcome");
+  }, [navigate, serverUser.isLoading, serverUser.data, localAccount]);
+  return localAccount || serverUser.data ? <Home /> : null;
 }
 
 function Router() {
@@ -52,6 +56,7 @@ function Router() {
       <Route path={"/api"} component={API} />
       <Route path={"/api/free"} component={FreeAPIs} />
       <Route path={"/admin"} component={Admin} />
+      <Route path={"/account"} component={Account} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

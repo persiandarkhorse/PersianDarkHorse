@@ -27,6 +27,8 @@ export type InsertUser = typeof users.$inferInsert;
 
 export const paymentSubmissions = mysqlTable("payment_submissions", {
   id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }),
+  planId: varchar("planId", { length: 40 }).notNull().default("horse_rider"),
   amount: varchar("amount", { length: 64 }).notNull(),
   currency: varchar("currency", { length: 64 }).notNull(),
   txid: varchar("txid", { length: 256 }).notNull().unique(),
@@ -52,3 +54,17 @@ export const apiCredentials = mysqlTable("api_credentials", {
 
 export type ApiCredential = typeof apiCredentials.$inferSelect;
 export type InsertApiCredential = typeof apiCredentials.$inferInsert;
+
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull().unique(),
+  planId: varchar("planId", { length: 40 }).notNull().default("horse_rider"),
+  status: mysqlEnum("status", ["active", "pending", "canceled", "expired"]).default("active").notNull(),
+  expiresAt: timestamp("expiresAt"),
+  isLifetime: int("isLifetime").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;

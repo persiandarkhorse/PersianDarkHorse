@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { apiCredentials, InsertApiCredential, InsertPaymentSubmission, InsertUser, paymentSubmissions, users } from "../drizzle/schema";
+import { apiCredentials, InsertApiCredential, InsertPaymentSubmission, InsertSubscription, InsertUser, paymentSubmissions, subscriptions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { decryptSecret, encryptSecret, secretLast4 } from './secretVault';
 
@@ -88,6 +88,28 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getSubscriptionByOpenId(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subscriptions).where(eq(subscriptions.userOpenId, userOpenId)).limit(1);
+  return result[0];
+}
+
+export async function upsertSubscription(input: InsertSubscription) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available.");
+  await db.insert(subscriptions).values(input).onDuplicateKeyUpdate({
+    set: {
+      planId: input.planId,
+      status: input.status,
+      expiresAt: input.expiresAt ?? null,
+      isLifetime: input.isLifetime ?? 0,
+      updatedAt: new Date(),
+    },
+  });
+  return getSubscriptionByOpenId(input.userOpenId);
 }
 
 export async function createPaymentSubmission(payment: InsertPaymentSubmission) {

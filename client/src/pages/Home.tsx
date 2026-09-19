@@ -142,7 +142,15 @@ export default function Home() {
     const storedIndex = Number(localStorage.getItem("fezi-agent-index") ?? 0);
     return (homeAgents[storedIndex] ?? homeAgents[0]).capabilities.map((capability) => capability.id);
   });
+  const subscriptionQuery = trpc.subscription.me.useQuery(undefined, { retry: false });
   const activeModes = agentModes[activeAgent.id] ?? modes;
+  const isPaidAccess = Boolean(subscriptionQuery.data?.isAdmin || subscriptionQuery.data?.source === "subscription");
+
+  useEffect(() => {
+    if (!subscriptionQuery.data || canUseAgent(activeAgent.id)) return;
+    const fallbackIndex = homeAgents.findIndex((agent) => canUseAgent(agent.id));
+    if (fallbackIndex >= 0 && fallbackIndex !== agentIndex) switchAgent(fallbackIndex);
+  }, [subscriptionQuery.data?.plan.id, subscriptionQuery.data?.isAdmin]);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [leftNavOpen, setLeftNavOpen] = useState(false);
@@ -157,8 +165,19 @@ export default function Home() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
 
+  function canUseAgent(agentId: string) {
+    return subscriptionQuery.data
+      ? Boolean(subscriptionQuery.data.isAdmin || (subscriptionQuery.data.source === "subscription" && subscriptionQuery.data.plan.agents.includes(agentId)))
+      : true;
+  }
+
   function switchAgent(index: number) {
     const next = (index + homeAgents.length) % homeAgents.length;
+    if (!canUseAgent(homeAgents[next].id)) {
+      setUploadError(`Agent «${homeAgents[next].name}» در پلن فعلی شما قفل است. برای دسترسی، اشتراک تهیه کنید.`);
+      setAgentDrawerOpen(false);
+      return;
+    }
     const chats = loadAgentChats();
     chats[activeAgent.id] = messages;
     localStorage.setItem("fezi-agent-chats", JSON.stringify(chats));
@@ -200,6 +219,10 @@ export default function Home() {
   const messageCount = useMemo(() => messages.filter((item) => item.role === "user").length, [messages]);
 
   async function toggleRecording() {
+    if (!isPaidAccess) {
+      setUploadError("قابلیت صوتی در پلن فعلی قفل است. برای دسترسی اشتراک تهیه کنید.");
+      return;
+    }
     if (recording) {
       recorderRef.current?.stop();
       setRecording(false);
@@ -231,6 +254,10 @@ export default function Home() {
   }
 
   async function uploadFile(file: File) {
+    if (!isPaidAccess) {
+      setUploadError("ارسال فایل و تصویر در پلن فعلی قفل است. برای دسترسی اشتراک تهیه کنید.");
+      return;
+    }
     setUploadError(null);
     if (file.size > 15 * 1024 * 1024) {
       setUploadError("حجم فایل باید حداکثر ۱۵ مگابایت باشد.");
@@ -317,6 +344,10 @@ export default function Home() {
   async function generateManikaImage() {
     const prompt = imagePrompt.trim();
     if (!prompt || imageMutation.isPending) return;
+    if (!isPaidAccess) {
+      setUploadError("استودیوی تصویر در پلن فعلی قفل است. برای دسترسی اشتراک تهیه کنید.");
+      return;
+    }
     try {
       const result = await imageMutation.mutateAsync({
         mode: imageMode,
@@ -382,7 +413,7 @@ export default function Home() {
             <Link href="/api/free" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><BookOpen size={17} /> پایگاه دانش</Link>
             <Link href="/welcome?tab=connectors" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#333] hover:bg-white"><PlugZap size={17} /> Connectors</Link>
           </nav>
-          <div className="mt-6 border-t border-[#e5e5e5] pt-5"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999]">حساب کاربری</p><Link href="/welcome" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl bg-[#edf7ee] px-3 py-3 text-sm font-medium text-[#286b35] hover:bg-[#e3f2e5]"><LogIn size={17} /> ورود به حساب</Link><button onClick={() => { localStorage.removeItem("fezi-account"); localStorage.removeItem("fezi-remember"); navigate("/welcome"); setLeftNavOpen(false); }} className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#fff0f0] px-3 py-3 text-right text-sm font-medium text-[#a62f2f] hover:bg-[#ffe5e5]"><LogOut size={17} /> خروج از حساب</button></div>
+          <div className="mt-6 border-t border-[#e5e5e5] pt-5"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999]">حساب کاربری</p><Link href="/account" onClick={() => setLeftNavOpen(false)} className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-medium text-[#333] hover:bg-[#f2f2f0]"><UserCircle size={17} /> پنل کاربری</Link><Link href="/welcome" onClick={() => setLeftNavOpen(false)} className="mt-2 flex items-center gap-3 rounded-xl bg-[#edf7ee] px-3 py-3 text-sm font-medium text-[#286b35] hover:bg-[#e3f2e5]"><LogIn size={17} /> ورود به حساب</Link><button onClick={() => { localStorage.removeItem("fezi-account"); localStorage.removeItem("fezi-remember"); navigate("/welcome"); setLeftNavOpen(false); }} className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#fff0f0] px-3 py-3 text-right text-sm font-medium text-[#a62f2f] hover:bg-[#ffe5e5]"><LogOut size={17} /> خروج از حساب</button></div>
           <div className="mt-4 rounded-2xl border border-[#e3e3df] bg-white p-3 text-[10px] leading-5 text-[#888]">تنظیمات و انتخاب‌های شما برای ایجنت فعال ذخیره می‌شود.</div>
         </aside>
         <aside id="fezi-agent-panel" className={`fixed inset-y-0 right-0 z-50 flex w-[min(360px,calc(100vw-24px))] flex-col overflow-y-auto border-l border-[#e5e5e5] bg-[#f7f7f7] p-5 shadow-2xl transition-transform duration-200 ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`} aria-label="پنل ایجنت فعال و تاریخچه گفتگو" data-drawer-side="right">
@@ -463,7 +494,7 @@ export default function Home() {
               <div><p className="font-serif text-[19px] font-semibold">Persian Dark Horse</p><p className="mt-0.5 text-[11px] text-[#666666]">FEZI AI · {activeAgent.name} · {language === "fa" ? activeMode.label : "Private conversation"}</p></div>
             </div>
             <div className="flex items-center gap-1 text-[#666666]"><button onClick={() => setLeftNavOpen(true)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] hover:bg-[#f5f5f5]" aria-expanded={leftNavOpen} aria-controls="fezi-user-panel"><img src={activeAgent.image} alt="" className="h-7 w-7 rounded-lg object-cover" />{activeAgent.name}</button><button onClick={() => setLeftNavOpen(true)} className="rounded-xl p-2.5 hover:bg-[#f5f5f5]" title="باز کردن منوی کاربری" aria-label="باز کردن منوی کاربری" aria-expanded={leftNavOpen} aria-controls="fezi-user-panel"><Menu size={19} /></button></div>
-            {agentDrawerOpen && <div className="absolute right-5 top-[64px] z-40 w-[350px] rounded-3xl border border-[#ddd] bg-white p-4 shadow-2xl" role="dialog" aria-label="انتخاب ایجنت"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold">انتخاب ایجنت</p><p className="mt-1 text-[10px] text-[#888]">ایجنت فعال را همین‌جا تغییر دهید</p></div><Link href="/welcome" className="text-[10px] underline">مشاهدهٔ پروفایل‌ها</Link></div><div className="mt-4 flex items-center gap-2"><button onClick={() => { const next = (agentIndex + homeAgents.length - 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت قبلی"><ArrowRight size={17} /></button><button onClick={() => { setAgentDrawerOpen(false); }} className="min-w-0 flex-1 rounded-2xl bg-[#f7f7f5] p-3 text-center hover:bg-[#efefed]" aria-label={`انتخاب ${activeAgent.name}`}><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="mx-auto h-14 w-14 rounded-2xl object-cover" /><p className="mt-2 text-sm font-semibold">{activeAgent.name}</p><p className="mt-1 text-[10px] text-[#888]">رایگان · {activeAgent.role}</p></button><button onClick={() => { const next = (agentIndex + 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت بعدی"><ArrowLeft size={17} /></button></div><div className="mt-3 grid grid-cols-5 gap-1.5">{homeAgents.map((agent, index) => <button key={agent.id} onClick={() => { switchAgent(index); }} className={`rounded-xl p-1.5 text-center ${index === agentIndex ? "bg-black text-white" : "bg-[#f5f5f3] hover:bg-[#e9e9e7]"}`} aria-label={`انتخاب ${agent.name}`} aria-pressed={index === agentIndex}><img src={agent.image} alt="" className="mx-auto h-8 w-8 rounded-lg object-cover" /><span className="mt-1 block truncate text-[9px]">{agent.name}</span></button>)}</div><div className="mt-4 border-t border-[#e7e7e5] pt-3"><p className="text-[10px] font-semibold text-[#666]">تاریخچهٔ جداگانهٔ گفتگوها</p><div className="mt-2 space-y-1.5">{homeAgents.map((agent, index) => { const count = loadAgentChats()[agent.id]?.filter((message) => message.role === "user").length ?? 0; return <button key={`history-${agent.id}`} onClick={() => switchAgent(index)} className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-right text-[10px] hover:bg-[#f4f4f2] ${index === agentIndex ? "bg-[#f4f4f2]" : ""}`}><span className="flex items-center gap-2"><img src={agent.image} alt="" className="h-6 w-6 rounded-lg object-cover" />{agent.name}</span><span className="text-[#999]">{count} پیام</span></button>; })}</div></div></div>}
+            {agentDrawerOpen && <div className="absolute right-5 top-[64px] z-40 w-[350px] rounded-3xl border border-[#ddd] bg-white p-4 shadow-2xl" role="dialog" aria-label="انتخاب ایجنت"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold">انتخاب ایجنت</p><p className="mt-1 text-[10px] text-[#888]">ایجنت فعال را همین‌جا تغییر دهید</p></div><Link href="/welcome" className="text-[10px] underline">مشاهدهٔ پروفایل‌ها</Link></div><div className="mt-4 flex items-center gap-2"><button onClick={() => { const next = (agentIndex + homeAgents.length - 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت قبلی"><ArrowRight size={17} /></button><button onClick={() => { setAgentDrawerOpen(false); }} className="min-w-0 flex-1 rounded-2xl bg-[#f7f7f5] p-3 text-center hover:bg-[#efefed]" aria-label={`انتخاب ${activeAgent.name}`}><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="mx-auto h-14 w-14 rounded-2xl object-cover" /><p className="mt-2 text-sm font-semibold">{activeAgent.name}</p><p className="mt-1 text-[10px] text-[#888]">{canUseAgent(activeAgent.id) ? "فعال" : "قفل اشتراک"} · {activeAgent.role}</p></button><button onClick={() => { const next = (agentIndex + 1) % homeAgents.length; switchAgent(next); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddd] hover:bg-[#f5f5f5]" aria-label="ایجنت بعدی"><ArrowLeft size={17} /></button></div><div className="mt-3 grid grid-cols-5 gap-1.5">{homeAgents.map((agent, index) => <button key={agent.id} onClick={() => { switchAgent(index); }} className={`rounded-xl p-1.5 text-center ${!canUseAgent(agent.id) ? "bg-[#f2eeee] text-[#9a6b6b]" : index === agentIndex ? "bg-black text-white" : "bg-[#f5f5f3] hover:bg-[#e9e9e7]"}`} aria-label={`انتخاب ${agent.name}`} aria-pressed={index === agentIndex}><img src={agent.image} alt="" className="mx-auto h-8 w-8 rounded-lg object-cover" /><span className="mt-1 block truncate text-[9px]">{agent.name}</span></button>)}</div><div className="mt-4 border-t border-[#e7e7e5] pt-3"><p className="text-[10px] font-semibold text-[#666]">تاریخچهٔ جداگانهٔ گفتگوها</p><div className="mt-2 space-y-1.5">{homeAgents.map((agent, index) => { const count = loadAgentChats()[agent.id]?.filter((message) => message.role === "user").length ?? 0; return <button key={`history-${agent.id}`} onClick={() => switchAgent(index)} className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-right text-[10px] hover:bg-[#f4f4f2] ${index === agentIndex ? "bg-[#f4f4f2]" : ""}`}><span className="flex items-center gap-2"><img src={agent.image} alt="" className="h-6 w-6 rounded-lg object-cover" />{agent.name}</span><span className="text-[#999]">{count} پیام</span></button>; })}</div></div></div>}
           </header>
 
           <div className="flex-1 overflow-y-auto px-5 py-8 md:px-12 lg:px-20">

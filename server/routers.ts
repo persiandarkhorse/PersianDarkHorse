@@ -2,14 +2,16 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { invokeLLM, type Message } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
-import { createPaymentSubmission, deleteApiCredential, getApiCredentialSecret, listApiCredentials, saveApiCredential } from "./db";
+import { createPaymentSubmission, deleteApiCredential, getApiCredentialSecret, getSubscriptionByOpenId, listApiCredentials, saveApiCredential, upsertSubscription } from "./db";
 import { storagePut } from "./storage";
 import { buildAgentRuntimePrompt, getCapabilityBindings } from "./capabilityRouter";
 import { invokeRouteway, ROUTEWAY_FREE_MODELS, ROUTEWAY_DEEPSEEK_MODEL } from "./routeway";
+import { assertAgentAccess, assertPaidAccess, resolveAccess } from "./access";
+import { PLANS, getPlan, type PlanId } from "../shared/plans";
 
 const manikaSystemPrompt = `You are Manika (مانیکا), a fictional adult AI character and bilingual creative companion. You are 24, Iranian, based in Tehran, and an AI influencer/model, creative director, content creator, stylist, photographer, storyteller, comedy partner, social media strategist, prompt engineer, and practical technical assistant.
 
@@ -70,14 +72,21 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
+  subscription: router({
+    me: protectedProcedure.query(async ({ ctx }) => {
+      const access = await resolveAccess(ctx.user);
+      return { plan: access.plan, isAdmin: access.isAdmin, source: access.source };
+    }),
+    plans: publicProcedure.query(() => PLANS),
+  }),
   payment: router({
-    submitTxid: publicProcedure
-      .input(z.object({ amount: z.string().regex(/^\d+(\.\d{1,8})?$/).max(64), currency: z.string().min(2).max(64), txid: z.string().min(8).max(256), memo: z.string().max(256).optional() }))
-      .mutation(async ({ input }) => {
+    submitTxid: protectedProcedure
+      .input(z.object({ planId: z.string().refine((value): value is PlanId => Boolean(getPlan(value)), "پلن نامعتبر است."), amount: z.string().regex(/^\d+(\.\d{1,8})?$/).max(64), currency: z.string().min(2).max(64), txid: z.string().min(8).max(256), memo: z.string().max(256).optional() }))
+      .mutation(async ({ input, ctx }) => {
         if ((input.currency === "TON" || input.currency === "Xrp") && !input.memo?.trim()) {
           throw new Error(`Memo برای ${input.currency} الزامی است.`);
         }
-        await createPaymentSubmission({ amount: input.amount, currency: input.currency, txid: input.txid, memo: input.memo?.trim() || null, status: "pending" });
+        await createPaymentSubmission({ userOpenId: ctx.user.openId, planId: input.planId, amount: input.amount, currency: input.currency, txid: input.txid, memo: input.memo?.trim() || null, status: "pending" });
         return { submitted: true, status: "pending" as const };
       }),
     prices: publicProcedure
@@ -104,15 +113,22 @@ export const appRouter = router({
     deleteCredential: adminProcedure
       .input(z.object({ id: z.number().int().positive() }))
       .mutation(async ({ input }) => deleteApiCredential(input.id)),
+    setSubscription: adminProcedure
+      .input(z.object({ userOpenId: z.string().min(1).max(64), planId: z.string().refine((value): value is PlanId => Boolean(getPlan(value)), "پلن نامعتبر است."), expiresAt: z.coerce.date().nullable().optional(), isLifetime: z.boolean().default(false) }))
+      .mutation(async ({ input }) => {
+        const subscription = await upsertSubscription({ userOpenId: input.userOpenId, planId: input.planId, status: "active", expiresAt: input.expiresAt ?? null, isLifetime: input.isLifetime ? 1 : 0 });
+        return { saved: true, subscription };
+      }),
   }),
   manika: router({
-    uploadFile: publicProcedure
+    uploadFile: protectedProcedure
       .input(z.object({
         fileName: z.string().min(1).max(180),
         contentType: z.string().min(1).max(120),
         dataBase64: z.string().min(1).max(20_000_000),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await assertPaidAccess(ctx.user);
         const data = Buffer.from(input.dataBase64, "base64");
         if (data.byteLength > 15 * 1024 * 1024) {
           throw new Error("File size must be 15 MB or less.");
@@ -121,9 +137,10 @@ export const appRouter = router({
         const stored = await storagePut(`chat-uploads/${safeName}`, data, input.contentType);
         return { ...stored, fileName: input.fileName, contentType: input.contentType, size: data.byteLength };
       }),
-    chat: publicProcedure
+    chat: protectedProcedure
       .input(z.object({ agentId: z.string().max(40).default("manika"), capabilityIds: z.array(z.string().max(120)).max(100).default([]), enabledConnectorIds: z.array(z.string().max(80)).max(100).default([]), provider: z.enum(["fezi", "routeway"]).default("fezi"), routewayModel: z.string().max(100).default(ROUTEWAY_DEEPSEEK_MODEL), mode: z.string().max(120).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12), deepThinking: z.boolean().default(false), webSearch: z.boolean().default(false) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await assertAgentAccess(ctx.user, input.agentId);
         const context = input.messages.map((message) => ({ role: message.role, content: message.content }));
         let webContext = "";
         if (input.webSearch) {
@@ -164,16 +181,18 @@ export const appRouter = router({
       .input(z.object({ agentId: z.string().max(40), capabilityIds: z.array(z.string().max(120)).max(100).optional() }))
       .query(({ input }) => getCapabilityBindings(input.agentId, input.capabilityIds)),
     routewayFreeModels: publicProcedure.query(() => ROUTEWAY_FREE_MODELS),
-    transcribe: publicProcedure
+    transcribe: protectedProcedure
       .input(z.object({ audioUrl: z.string().url().max(2000), language: z.string().length(2).optional() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await assertPaidAccess(ctx.user);
         const result = await transcribeAudio({ audioUrl: input.audioUrl, language: input.language, prompt: "Transcribe the user's Persian or English voice message accurately." });
         if ("error" in result) throw new Error(result.error);
         return { text: result.text, language: result.language };
       }),
-    speech: publicProcedure
+    speech: protectedProcedure
       .input(z.object({ text: z.string().min(1).max(2000), voiceId: z.string().min(1).max(120).default("sabrina"), model: z.string().min(1).max(80).default("simba-3.2") }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await assertPaidAccess(ctx.user);
         const apiKey = await getApiCredentialSecret("Speechify") ?? process.env.SPEECHIFY_API_KEY;
         if (!apiKey) throw new Error("Speechify is not configured.");
         const response = await fetch("https://api.speechify.ai/v1/audio/speech", {
@@ -186,7 +205,7 @@ export const appRouter = router({
         if (!body.audio_data) throw new Error("Speechify returned no audio.");
         return { audioBase64: body.audio_data, contentType: body.audio_format === "wav" ? "audio/wav" : "audio/mpeg" };
       }),
-    image: publicProcedure
+    image: protectedProcedure
       .input(z.object({
         prompt: z.string().min(3).max(4000),
         mode: z.enum(["generate", "edit"]).default("generate"),
@@ -194,7 +213,8 @@ export const appRouter = router({
         engine: z.string().min(2).max(100).default("FEZI Image Core"),
         originalImageUrl: z.string().min(1).max(2000).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await assertPaidAccess(ctx.user);
         if (input.imageType === "manika" && !input.originalImageUrl) {
           throw new Error("A Manika reference image is required.");
         }
