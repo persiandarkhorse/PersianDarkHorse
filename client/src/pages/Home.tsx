@@ -40,11 +40,11 @@ import {
 
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 const homeAgents = [
-  { id: "manika", name: "مانیکا", role: "خلاق و کارگردان", image: officialPortrait },
-  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", image: "/manus-storage/fezi-reference_142ab3b4.png" },
-  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", image: "/manus-storage/arvin-reference_a9e918b0.png" },
-  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", image: "/manus-storage/arta-reference_b28c18c8.png" },
-  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", image: "/manus-storage/negar-reference_6025582a.png" },
+  { id: "manika", name: "مانیکا", role: "خلاق و کارگردان", detail: "ایده‌پردازی، تصویر، استایل و محتوای خلاقانه.", image: officialPortrait },
+  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", detail: "حل مسئله، تحقیق، ساخت محصول و مدیریت پروژه.", image: "/manus-storage/fezi-reference_142ab3b4.png" },
+  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", detail: "کسب‌وکار، فروش، مارکتینگ، برندینگ و رشد.", image: "/manus-storage/arvin-reference_a9e918b0.png" },
+  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", detail: "معما، بازی، نقش‌آفرینی و داستان‌های تعاملی.", image: "/manus-storage/arta-reference_b28c18c8.png" },
+  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", detail: "کدنویسی، نمونهٔ اولیه، محصول و اتوماسیون.", image: "/manus-storage/negar-reference_6025582a.png" },
 ];
 
 type Role = "user" | "assistant";
@@ -406,8 +406,8 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto px-5 py-8 md:px-12 lg:px-20">
             <div className="mx-auto max-w-3xl">
               <div className="mb-10 flex items-center gap-4 border-b border-[#eeeeee] pb-8">
-                <div className="relative h-16 w-16 overflow-hidden rounded-[22px] bg-[#000000] shadow-md shadow-[#8f6f5c]/15"><img src={officialPortrait} alt="مانیکا" className="h-full w-full object-cover object-top" /></div>
-                <div><p className="font-serif text-2xl font-semibold tracking-tight">سلام، من مانیکا هستم.</p><p className="mt-1 text-sm text-[#666666]">ایده‌هایت را با هم به چیزی ماندگار تبدیل کنیم.</p></div>
+                <div className="relative h-16 w-16 overflow-hidden rounded-[22px] bg-[#000000] shadow-md shadow-[#8f6f5c]/15"><img src={activeAgent.image} alt={`پرترهٔ ${activeAgent.name}`} className="h-full w-full object-cover object-top" /></div>
+                <div><p className="font-serif text-2xl font-semibold tracking-tight">سلام، من {activeAgent.name} هستم.</p><p className="mt-1 text-sm text-[#666666]">{activeAgent.detail}</p></div>
               </div>
 
               <div className="space-y-7">
@@ -436,7 +436,7 @@ export default function Home() {
               {uploadError && <div className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{uploadError}</div>}
               {attachment && <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-xs"><span className="flex min-w-0 items-center gap-2"><FileText size={15} /><span className="truncate">{attachment.fileName}</span></span><button onClick={() => setAttachment(null)} className="rounded-lg p-1 text-[#777777] hover:bg-[#f2f2f2]" aria-label="حذف فایل پیوست"><X size={15} /></button></div>}
               <div onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }} onDragLeave={() => setIsDraggingFile(false)} onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); handleFiles(event.dataTransfer.files); }} className={`rounded-[24px] border bg-white p-2 shadow-[0_10px_35px_rgba(91,62,46,0.08)] transition focus-within:ring-4 focus-within:ring-[#dddddd]/40 ${isDraggingFile ? "border-[#111111] bg-[#fafafa] ring-4 ring-[#dddddd]" : "border-[#e5e5e5] focus-within:border-[#888888]"}`}>
-                <Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="پیامت را برای مانیکا بنویس..." className="min-h-[54px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 shadow-none focus-visible:ring-0" dir="auto" />
+                <Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder={`پیامت را برای ${activeAgent.name} بنویس...`} className="min-h-[54px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 shadow-none focus-visible:ring-0" dir="auto" />
                 <div className="relative flex items-center justify-between px-1.5 pb-0.5"><div className="flex items-center gap-1 text-[#777777]"><Button onClick={() => sendMessage()} disabled={!canSend} size="icon" className="h-9 w-9 rounded-xl bg-[#39312e] text-white hover:bg-[#594a43] disabled:bg-[#eeeeee] disabled:text-[#999999]" aria-label="ارسال پیام"><ArrowUp size={17} /></Button><span className="hidden text-[10px] text-[#999999] sm:block">{messageCount} پیام</span></div><div className="flex items-center gap-1"><input ref={fileInputRef} type="file" className="sr-only" accept="image/*" onChange={(event) => { handleFiles(event.target.files); event.currentTarget.value = ""; }} /><button onClick={() => fileInputRef.current?.click()} className="rounded-xl p-2 text-[#777] hover:bg-[#f5efeb]" title="گالری" aria-label="انتخاب تصویر از گالری"><ImageIcon size={18} /></button><button onClick={() => setSkillsOpen((value) => !value)} className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${skillsOpen ? "bg-black text-white" : "text-[#777] hover:bg-[#f5efeb]"}`} title="مهارت‌ها و کارها" aria-label="باز کردن مهارت‌ها و کارها" aria-expanded={skillsOpen}>+</button><button onClick={() => void toggleRecording()} className={`rounded-xl p-2 hover:bg-[#f5efeb] ${recording ? "bg-[#111111] text-white" : ""}`} title={recording ? "توقف ضبط ویس" : "ضبط و ارسال ویس"} aria-label={recording ? "توقف ضبط ویس" : "ضبط و ارسال ویس"}><Mic size={18} /></button></div>{skillsOpen && <div className="absolute bottom-12 right-1 z-30 w-64 rounded-2xl border border-[#ddd] bg-white p-3 shadow-xl"><p className="text-xs font-semibold">مهارت‌ها و کارها</p><div className="mt-2 grid grid-cols-2 gap-2">{["تفکر عمیق", "جست‌وجوی وب", "تولید تصویر", "مدیریت محتوا"].map((skill) => <button key={skill} onClick={() => { if (skill === "تفکر عمیق") setDeepThinking((value) => !value); if (skill === "جست‌وجوی وب") setWebSearch((value) => !value); setSkillsOpen(false); }} className="rounded-xl bg-[#f5f5f3] px-2 py-2 text-[10px] hover:bg-[#e9e9e7]">{skill}</button>)}</div></div>}</div>
               </div>
               <p className="mt-3 text-center text-[10px] text-[#999999]">مانیکا ممکن است اشتباه کند؛ برای تصمیم‌های مهم، اطلاعات را بررسی کن.</p>
