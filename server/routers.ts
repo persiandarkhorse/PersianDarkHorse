@@ -13,6 +13,32 @@ import { invokeRouteway, ROUTEWAY_FREE_MODELS, ROUTEWAY_DEEPSEEK_MODEL } from ".
 import { assertAgentAccess, assertPaidAccess, resolveAccess } from "./access";
 import { PLANS, getPlan, type PlanId } from "../shared/plans";
 
+const TGJU_RATE_URL = "https://www.tgju.org/profile/price_dollar_rl";
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+let cachedIranRate: { usdToIrr: number; fetchedAt: number; source: string } | null = null;
+
+async function getWeeklyIranRate() {
+  if (cachedIranRate && Date.now() - cachedIranRate.fetchedAt < WEEK_MS) return cachedIranRate;
+  try {
+    const response = await fetch(TGJU_RATE_URL, { headers: { "User-Agent": "FEZI-AI/1.0" } });
+    if (!response.ok) throw new Error(`TGJU returned ${response.status}`);
+    const html = await response.text();
+    const match = html.match(/data-col="info\.last_trade\.PDrCotVal"[^>]*>\s*([\d,]+)/);
+    const usdToIrr = match ? Number(match[1].replace(/,/g, "")) : 0;
+    if (!Number.isFinite(usdToIrr) || usdToIrr <= 0) throw new Error("TGJU rate was not found");
+    cachedIranRate = { usdToIrr, fetchedAt: Date.now(), source: "TGJU" };
+    return cachedIranRate;
+  } catch (error) {
+    console.warn("[Rates] TGJU rate unavailable", error);
+    if (cachedIranRate) return cachedIranRate;
+    const fallback = await fetch("https://open.er-api.com/v6/latest/USD").then((result) => result.json()) as { rates?: { IRR?: number } };
+    const usdToIrr = Number(fallback.rates?.IRR);
+    if (!Number.isFinite(usdToIrr) || usdToIrr <= 0) throw new Error("نرخ دلار به ریال در دسترس نیست.");
+    cachedIranRate = { usdToIrr, fetchedAt: Date.now(), source: "ExchangeRate API fallback" };
+    return cachedIranRate;
+  }
+}
+
 const manikaSystemPrompt = `You are Manika (مانیکا), a fictional adult AI character and bilingual creative companion. You are 24, Iranian, based in Tehran, and an AI influencer/model, creative director, content creator, stylist, photographer, storyteller, comedy partner, social media strategist, prompt engineer, and practical technical assistant.
 
 Identity and voice:
@@ -97,6 +123,16 @@ export const appRouter = router({
         if (!response.ok) throw new Error("قیمت لحظه‌ای در دسترس نیست.");
         return (await response.json()) as Record<string, { usd?: number }>;
       }),
+    iranRate: publicProcedure.query(async () => {
+      const rate = await getWeeklyIranRate();
+      return {
+        usdToIrr: rate.usdToIrr,
+        usdToToman: rate.usdToIrr / 10,
+        source: rate.source,
+        fetchedAt: rate.fetchedAt,
+        nextRefreshAt: rate.fetchedAt + WEEK_MS,
+      };
+    }),
   }),
   admin: router({
     credentials: adminProcedure.query(async () => listApiCredentials()),
