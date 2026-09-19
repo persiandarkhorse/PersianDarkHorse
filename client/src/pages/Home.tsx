@@ -395,8 +395,9 @@ export default function Home() {
 
               <div className="space-y-7">
                 {messages.map((message) => <div key={message.id} className={`group flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}>
-                  {message.role === "assistant" ? <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e5e5e5] text-[#222222]"><Sparkles size={15} /></div> : <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#39312e] text-[11px] font-semibold text-white">شما</div>}
+                  {message.role === "assistant" ? <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#e5e5e5] text-[#222222]"><img src={activeAgent.image} alt={`تصویر ${activeAgent.name}`} className="h-full w-full object-cover" /></div> : <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#39312e] text-[11px] font-semibold text-white">شما</div>}
                   <div className={`min-w-0 max-w-[85%] ${message.role === "user" ? "text-left" : ""}`}>
+                    {message.role === "assistant" && <p className="mb-1 px-1 text-[11px] font-semibold text-[#555]">{activeAgent.name}</p>}
                     <div className={`rounded-[20px] px-4 py-3.5 text-[14px] leading-7 ${message.role === "user" ? "rounded-tr-md bg-[#39312e] text-white" : "rounded-tl-md bg-[#f3f3f3] text-[#222222]"}`} dir="auto">
                       {message.role === "assistant" ? <Streamdown>{message.content}</Streamdown> : <p className="whitespace-pre-wrap">{message.content.replace(/\n\nفایل پیوست‌شده:[\s\S]*$/, "")}</p>}
                     </div>
