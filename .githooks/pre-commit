@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+root_dir="$(git rev-parse --show-toplevel)"
+cd "$root_dir"
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm security:scan -- --staged
+else
+  node scripts/secret-scan.mjs --staged
+fi

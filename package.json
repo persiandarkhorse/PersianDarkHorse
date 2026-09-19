@@ -10,6 +10,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "security:scan": "node scripts/secret-scan.mjs",
+    "security:install-hook": "git config core.hooksPath .githooks && chmod +x .githooks/pre-commit",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {
