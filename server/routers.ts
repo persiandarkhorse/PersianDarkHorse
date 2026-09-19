@@ -13,6 +13,20 @@ import { invokeRouteway, ROUTEWAY_FREE_MODELS, ROUTEWAY_DEEPSEEK_MODEL } from ".
 import { assertAgentAccess, assertPaidAccess, resolveAccess } from "./access";
 import { PLANS, getPlan, type PlanId } from "../shared/plans";
 
+function buildSimplePdf(content: string): Buffer {
+  const safe = content.replace(/[^\x20-\x7E\n]/g, "?").slice(0, 8000);
+  const lines = safe.split(/\r?\n/).slice(0, 45);
+  const text = lines.map((line, index) => `${index ? "0 -16 Td " : "50 750 Td "}(${line.replace(/[\\()]/g, "\\$&")}) Tj`).join(" ");
+  const stream = `BT /F1 11 Tf ${text} ET`;
+  const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => { offsets[index + 1] = Buffer.byteLength(pdf, "utf8"); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; });
+  const xref = Buffer.byteLength(pdf, "utf8");
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n `).join("\n")}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Buffer.from(pdf, "utf8");
+}
+
 const TGJU_RATE_URL = "https://www.tgju.org/profile/price_dollar_rl";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 let cachedIranRate: { usdToIrr: number; fetchedAt: number; source: string } | null = null;
@@ -173,6 +187,22 @@ export const appRouter = router({
         const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-150) || "upload";
         const stored = await storagePut(`chat-uploads/${safeName}`, data, input.contentType);
         return { ...stored, fileName: input.fileName, contentType: input.contentType, size: data.byteLength };
+      }),
+    createArtifact: protectedProcedure
+      .input(z.object({
+        content: z.string().min(1).max(120_000),
+        fileName: z.string().min(1).max(160),
+        format: z.enum(["md", "txt", "json", "csv", "pdf"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await assertPaidAccess(ctx.user);
+        const extension = input.format;
+        const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "fezi-artifact";
+        const fileName = safeName.endsWith(`.${extension}`) ? safeName : `${safeName}.${extension}`;
+        const contentType = extension === "pdf" ? "application/pdf" : extension === "json" ? "application/json" : extension === "csv" ? "text/csv" : extension === "md" ? "text/markdown" : "text/plain";
+        const data = extension === "pdf" ? buildSimplePdf(input.content) : Buffer.from(input.content, "utf8");
+        const stored = await storagePut(`artifacts/${ctx.user.openId}/${fileName}`, data, contentType);
+        return { ...stored, fileName, contentType, size: data.byteLength };
       }),
     chat: protectedProcedure
       .input(z.object({ agentId: z.string().max(40).default("manika"), capabilityIds: z.array(z.string().max(120)).max(100).default([]), enabledConnectorIds: z.array(z.string().max(80)).max(100).default([]), provider: z.enum(["fezi", "routeway"]).default("fezi"), routewayModel: z.string().max(100).default(ROUTEWAY_DEEPSEEK_MODEL), mode: z.string().max(120).default("گفت‌وگوی آزاد"), messages: z.array(messageSchema).min(1).max(12), deepThinking: z.boolean().default(false), webSearch: z.boolean().default(false) }))

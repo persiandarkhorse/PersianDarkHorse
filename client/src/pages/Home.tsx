@@ -363,6 +363,7 @@ export default function Home() {
   const chatMutation = trpc.manika.chat.useMutation();
   const imageMutation = trpc.manika.image.useMutation();
   const uploadMutation = trpc.manika.uploadFile.useMutation();
+  const artifactMutation = trpc.manika.createArtifact.useMutation();
   const speechMutation = trpc.manika.speech.useMutation();
   const transcribeMutation = trpc.manika.transcribe.useMutation();
   const routewayModelsQuery = trpc.manika.routewayFreeModels.useQuery();
@@ -384,6 +385,16 @@ export default function Home() {
   const canSend = (input.trim().length > 0 || Boolean(attachment)) && !chatMutation.isPending && !uploadMutation.isPending;
   const canGenerateImage = imagePrompt.trim().length > 2 && !imageMutation.isPending;
   const messageCount = useMemo(() => messages.filter((item) => item.role === "user").length, [messages]);
+
+  async function createArtifact(message: ChatMessage, format: "md" | "pdf") {
+    if (artifactMutation.isPending || !message.content.trim()) return;
+    try {
+      const result = await artifactMutation.mutateAsync({ content: message.content, fileName: `${activeAgent.name}-${message.id}`, format });
+      setMessages((current) => current.map((item) => item.id === message.id ? { ...item, attachment: { fileName: result.fileName, contentType: result.contentType, size: result.size, url: result.url } } : item));
+    } catch {
+      setUploadError("ساخت فایل خروجی انجام نشد. لطفاً دوباره امتحان کنید.");
+    }
+  }
 
   async function toggleRecording() {
     if (!isPaidAccess) {
@@ -689,7 +700,7 @@ export default function Home() {
                     </div>
                     {message.attachment && <a href={message.attachment.url} target="_blank" rel="noreferrer" className="mt-2 flex items-center gap-3 rounded-2xl border border-[#e4e4e4] bg-white px-3 py-2 text-xs text-[#333333] hover:border-[#999999]"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f1f1f1]">{message.attachment.contentType.startsWith("image/") ? <img src={message.attachment.url} alt="" className="h-8 w-8 rounded-xl object-cover" /> : <FileText size={16} />}</span><span className="min-w-0 truncate">{message.attachment.fileName}</span></a>}
                     {message.imageUrl && <div className="mt-3 overflow-hidden rounded-[20px] border border-[#e7d9d0] bg-white shadow-sm"><img src={message.imageUrl} alt="تصویر تولیدشده از مانیکا" className="max-h-[560px] w-full object-cover" /><div className="flex items-center justify-between px-3 py-2 text-[11px] text-[#666666]"><span>تصویر تولیدشده با هویت بصری مانیکا</span><a href={message.imageUrl} target="_blank" rel="noreferrer" className="font-medium text-[#222222] hover:underline">باز کردن تصویر</a></div></div>}
-                    {message.role === "assistant" && message.id !== "welcome" && <div className="mt-2 flex flex-wrap items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"><button onClick={() => copyMessage(message)} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="کپی"><span className="sr-only">کپی</span>{copiedId === message.id ? <Check size={14} /> : <Copy size={14} />}</button>{message.audioUrl ? <><audio controls src={message.audioUrl} className="h-8 max-w-[220px]" aria-label="پخش پاسخ صوتی" /><a href={message.audioUrl} download={`manika-${message.id}.mp3`} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="دانلود صوت" aria-label="دانلود پاسخ صوتی"><Download size={14} /></a></> : <button onClick={() => generateAudio(message)} disabled={audioLoadingId !== null} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-[#777777] hover:bg-[#f2f2f2] disabled:opacity-50" title="تولید و پخش صوت"><Volume2 size={14} />{audioLoadingId === message.id ? "در حال ساخت..." : "پخش صوت"}</button>}</div>}
+                    {message.role === "assistant" && message.id !== "welcome" && <div className="mt-2 flex flex-wrap items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"><button onClick={() => copyMessage(message)} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="کپی"><span className="sr-only">کپی</span>{copiedId === message.id ? <Check size={14} /> : <Copy size={14} />}</button>{message.content.length > 40 && <><button onClick={() => void createArtifact(message, "md")} disabled={artifactMutation.isPending} className="rounded-lg px-2 py-1.5 text-[10px] text-[#777777] hover:bg-[#f2f2f2] disabled:opacity-50" title="دریافت Markdown">MD</button><button onClick={() => void createArtifact(message, "pdf")} disabled={artifactMutation.isPending} className="rounded-lg px-2 py-1.5 text-[10px] text-[#777777] hover:bg-[#f2f2f2] disabled:opacity-50" title="دریافت PDF">PDF</button></>}{message.audioUrl ? <><audio controls src={message.audioUrl} className="h-8 max-w-[220px]" aria-label="پخش پاسخ صوتی" /><a href={message.audioUrl} download={`manika-${message.id}.mp3`} className="rounded-lg p-1.5 text-[#777777] hover:bg-[#f2f2f2]" title="دانلود صوت" aria-label="دانلود پاسخ صوتی"><Download size={14} /></a></> : <button onClick={() => generateAudio(message)} disabled={audioLoadingId !== null} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-[#777777] hover:bg-[#f2f2f2] disabled:opacity-50" title="تولید و پخش صوت"><Volume2 size={14} />{audioLoadingId === message.id ? "در حال ساخت..." : "پخش صوت"}</button>}</div>}
                   </div>
                 </div>)}
                 {chatMutation.isPending && <div className="flex gap-3"><div className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl bg-[#e5e5e5] text-[#222222]"><Sparkles size={15} className="animate-pulse" /></div><div className="rounded-[20px] rounded-tl-md bg-[#f3f3f3] px-5 py-4"><div className="flex gap-1.5"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777] [animation-delay:-0.2s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777] [animation-delay:-0.1s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#777777]" /></div></div></div>}
