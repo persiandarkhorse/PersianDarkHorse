@@ -3,6 +3,7 @@ import { Streamdown } from "streamdown";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { agentProfiles } from "../../../shared/agentProfiles";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowUp,
@@ -39,13 +40,13 @@ import {
 } from "lucide-react";
 
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
-const homeAgents = [
-  { id: "manika", name: "مانیکا", role: "خلاق و کارگردان", detail: "ایده‌پردازی، تصویر، استایل و محتوای خلاقانه.", menuHint: "استودیو خلاق برای تصویر، روایت و محتوای ماندگار.", skills: ["تصویر و ویرایش", "سناریو و پرامپت", "استایل و برند", "محتوای شبکه‌های اجتماعی"], image: officialPortrait },
-  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", detail: "حل مسئله، تحقیق، ساخت محصول و مدیریت پروژه.", menuHint: "مرکز فرماندهی برای تبدیل مسئله‌های پیچیده به مسیر اجرایی.", skills: ["تحقیق و تحلیل", "حل مسئله", "ساخت محصول", "مدیریت پروژه"], image: "/manus-storage/fezi-reference_142ab3b4.png" },
-  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", detail: "کسب‌وکار، فروش، مارکتینگ، برندینگ و رشد.", menuHint: "اتاق استراتژی برای رشد درآمد، فروش و جایگاه برند.", skills: ["مدل درآمدی", "فروش و قیف بازاریابی", "برندینگ و SEO", "تحلیل رقبا"], image: "/manus-storage/arvin-reference_a9e918b0.png" },
-  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", detail: "معما، بازی، نقش‌آفرینی و داستان‌های تعاملی.", menuHint: "اتاق بازی برای معما، داستان‌های چندمسیره و سرگرمی مرموز.", skills: ["معما و کوییز", "داستان تعاملی", "نقش‌آفرینی", "بازی‌های کلامی"], image: "/manus-storage/arta-reference_b28c18c8.png" },
-  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", detail: "کدنویسی، نمونهٔ اولیه، محصول و اتوماسیون.", menuHint: "کارگاه ساخت برای تبدیل ایده به کد، نمونهٔ اولیه و محصول.", skills: ["React و TypeScript", "API و دیتابیس", "اتوماسیون", "تست و دیباگ"], image: "/manus-storage/negar-reference_6025582a.png" },
-];
+const homeAgents = agentProfiles.map((agent) => ({
+  ...agent,
+  detail: agent.description,
+  menuHint: agent.description,
+  skills: agent.knowledge,
+  greeting: agent.personality,
+}));
 
 type Role = "user" | "assistant";
 type Attachment = { fileName: string; contentType: string; size: number; url: string };
@@ -64,38 +65,11 @@ const modes: Mode[] = [
   { label: "دستیار فنی", description: "وب، کد و ایده‌های محصول", icon: Sparkles },
 ];
 
-const agentModes: Record<string, Mode[]> = {
-  manika: [
-    { label: "استودیو خلاق", description: "ایده، تصویر و استایل", icon: Sparkles },
-    { label: "کارگردان تصویر", description: "صحنه، نور و پرامپت", icon: Camera },
-    { label: "مدیر محتوای مانیکا", description: "ریلز، کپشن و روایت", icon: WandSparkles },
-    { label: "مشاور استایل", description: "فشن، هویت و زیبایی‌شناسی", icon: Sparkles },
-  ],
-  fezi: [
-    { label: "حل مسئله", description: "تحلیل و تصمیم‌گیری", icon: BrainCircuit },
-    { label: "اتاق تحقیق", description: "جست‌وجو و جمع‌بندی دقیق", icon: Globe2 },
-    { label: "سازندهٔ محصول", description: "از ایده تا نقشهٔ اجرا", icon: WandSparkles },
-    { label: "هماهنگ‌کننده", description: "تقسیم کار و مدیریت پروژه", icon: Settings2 },
-  ],
-  arvin: [
-    { label: "استراتژی رشد", description: "فرصت، بازار و مسیر رشد", icon: BrainCircuit },
-    { label: "فروش و درآمد", description: "قیف فروش و قیمت‌گذاری", icon: Coins },
-    { label: "برند و مارکتینگ", description: "پیام، محتوا و جایگاه‌سازی", icon: WandSparkles },
-    { label: "تحلیل رقبا", description: "مقایسه و مزیت رقابتی", icon: Globe2 },
-  ],
-  arta: [
-    { label: "اتاق معما", description: "چیستان و چالش ذهنی", icon: BrainCircuit },
-    { label: "داستان تعاملی", description: "انتخاب، نقش‌آفرینی و روایت", icon: Sparkles },
-    { label: "بازی‌ساز", description: "طراحی بازی و کوییز", icon: WandSparkles },
-    { label: "قصهٔ مرموز", description: "ترس، طنز و ماجراجویی", icon: Camera },
-  ],
-  negar: [
-    { label: "معماری فنی", description: "انتخاب stack و طراحی سیستم", icon: Code2 },
-    { label: "ساخت محصول", description: "نمونهٔ اولیه و رابط کاربری", icon: Settings2 },
-    { label: "کدنویسی", description: "React، TypeScript و API", icon: Code2 },
-    { label: "تست و دیباگ", description: "رفع خطا و آماده‌سازی انتشار", icon: Check },
-  ],
-};
+const agentModes: Record<string, Mode[]> = Object.fromEntries(agentProfiles.map((agent) => [agent.id, agent.modes.map((label, index) => ({
+  label,
+  description: agent.capabilities[index]?.description ?? agent.description,
+  icon: [Sparkles, Camera, WandSparkles, BrainCircuit, Settings2][index % 5],
+}))]));
 
 const agentStarters: Record<string, string[]> = {
   manika: ["برای امروز یک ایدهٔ محتوایی خلاقانه پیشنهاد بده.", "یک ایدهٔ پرترهٔ سینمایی برای مانیکا بساز.", "برای یک برند عطر، سناریوی ریلز کوتاه بنویس."],
@@ -124,14 +98,7 @@ function makeId() {
 }
 
 function agentWelcome(agent: (typeof homeAgents)[number]): ChatMessage[] {
-  const messages: Record<string, string> = {
-    manika: "سلام، من مانیکا هستم. برای ایده‌پردازی، تصویر، استایل و محتوای خلاقانه آماده‌ام. امروز روی چه چیزی کار کنیم؟",
-    fezi: "سلام، من فضی هستم. برای حل مسئله، تحقیق، ساخت محصول و هماهنگ‌کردن مسیر کار کنار شما هستم. از کجا شروع کنیم؟",
-    arvin: "سلام، من آروین هستم. روی کسب‌وکار، فروش، مارکتینگ، برندینگ و رشد تمرکز دارم. هدف امروز شما چیست؟",
-    arta: "سلام، من آرتا هستم. برای معما، بازی، داستان تعاملی و ایده‌های سرگرم‌کننده آماده‌ام. چه چالشی را شروع کنیم؟",
-    negar: "سلام، من نگار هستم. ایده‌ها را به کد، نمونهٔ اولیه و محصول واقعی تبدیل می‌کنم. چه چیزی بسازیم؟",
-  };
-  return [{ id: `welcome-${agent.id}`, role: "assistant", content: messages[agent.id] ?? `سلام، من ${agent.name} هستم. آماده‌ام با شما گفتگو کنم.`, createdAt: Date.now() }];
+  return [{ id: `welcome-${agent.id}`, role: "assistant", content: `${agent.personality}\n\nسلام، من ${agent.name} هستم. آماده‌ام در حوزهٔ ${agent.role} کنارتان باشم.`, createdAt: Date.now() }];
 }
 
 function initialMessages(): ChatMessage[] {
