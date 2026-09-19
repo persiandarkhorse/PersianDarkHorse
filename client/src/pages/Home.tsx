@@ -64,6 +64,39 @@ const modes: Mode[] = [
   { label: "دستیار فنی", description: "وب، کد و ایده‌های محصول", icon: Sparkles },
 ];
 
+const agentModes: Record<string, Mode[]> = {
+  manika: [
+    { label: "استودیو خلاق", description: "ایده، تصویر و استایل", icon: Sparkles },
+    { label: "کارگردان تصویر", description: "صحنه، نور و پرامپت", icon: Camera },
+    { label: "مدیر محتوای مانیکا", description: "ریلز، کپشن و روایت", icon: WandSparkles },
+    { label: "مشاور استایل", description: "فشن، هویت و زیبایی‌شناسی", icon: Sparkles },
+  ],
+  fezi: [
+    { label: "حل مسئله", description: "تحلیل و تصمیم‌گیری", icon: BrainCircuit },
+    { label: "اتاق تحقیق", description: "جست‌وجو و جمع‌بندی دقیق", icon: Globe2 },
+    { label: "سازندهٔ محصول", description: "از ایده تا نقشهٔ اجرا", icon: WandSparkles },
+    { label: "هماهنگ‌کننده", description: "تقسیم کار و مدیریت پروژه", icon: Settings2 },
+  ],
+  arvin: [
+    { label: "استراتژی رشد", description: "فرصت، بازار و مسیر رشد", icon: BrainCircuit },
+    { label: "فروش و درآمد", description: "قیف فروش و قیمت‌گذاری", icon: Coins },
+    { label: "برند و مارکتینگ", description: "پیام، محتوا و جایگاه‌سازی", icon: WandSparkles },
+    { label: "تحلیل رقبا", description: "مقایسه و مزیت رقابتی", icon: Globe2 },
+  ],
+  arta: [
+    { label: "اتاق معما", description: "چیستان و چالش ذهنی", icon: BrainCircuit },
+    { label: "داستان تعاملی", description: "انتخاب، نقش‌آفرینی و روایت", icon: Sparkles },
+    { label: "بازی‌ساز", description: "طراحی بازی و کوییز", icon: WandSparkles },
+    { label: "قصهٔ مرموز", description: "ترس، طنز و ماجراجویی", icon: Camera },
+  ],
+  negar: [
+    { label: "معماری فنی", description: "انتخاب stack و طراحی سیستم", icon: Code2 },
+    { label: "ساخت محصول", description: "نمونهٔ اولیه و رابط کاربری", icon: Settings2 },
+    { label: "کدنویسی", description: "React، TypeScript و API", icon: Code2 },
+    { label: "تست و دیباگ", description: "رفع خطا و آماده‌سازی انتشار", icon: Check },
+  ],
+};
+
 const agentStarters: Record<string, string[]> = {
   manika: ["برای امروز یک ایدهٔ محتوایی خلاقانه پیشنهاد بده.", "یک ایدهٔ پرترهٔ سینمایی برای مانیکا بساز.", "برای یک برند عطر، سناریوی ریلز کوتاه بنویس."],
   fezi: ["برای یک ایدهٔ خام، نقشهٔ اجرای عملی طراحی کن.", "این مسئله را تحلیل کن و بهترین راه‌حل را پیشنهاد بده.", "برای ساخت یک محصول جدید، برنامهٔ مرحله‌به‌مرحله بنویس."],
@@ -129,6 +162,7 @@ export default function Home() {
   const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const [agentIndex, setAgentIndex] = useState(() => Number(localStorage.getItem("fezi-agent-index") ?? 0));
   const activeAgent = homeAgents[agentIndex] ?? homeAgents[0];
+  const activeModes = agentModes[activeAgent.id] ?? modes;
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -149,6 +183,7 @@ export default function Home() {
     localStorage.setItem("fezi-agent-chats", JSON.stringify(chats));
     setAgentIndex(next);
     localStorage.setItem("fezi-agent-index", String(next));
+    setActiveMode((agentModes[homeAgents[next].id] ?? modes)[0]);
     setMessages(initialAgentMessages(homeAgents[next].id));
     setInput("");
     setAttachment(null);
@@ -367,7 +402,7 @@ export default function Home() {
           <div className="mt-9">
             <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666666]">حالت‌های کاری</p>
             <div className="space-y-1.5">
-              {modes.map((mode) => {
+              {activeModes.map((mode) => {
                 const Icon = mode.icon;
                 const active = activeMode.label === mode.label;
                 return <button key={mode.label} onClick={() => { setActiveMode(mode); setMobileMenuOpen(false); }} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-right transition ${active ? "bg-white shadow-sm ring-1 ring-[#dddddd]" : "hover:bg-white/70"}`}>
