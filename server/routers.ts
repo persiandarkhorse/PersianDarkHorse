@@ -252,6 +252,10 @@ export const appRouter = router({
         size: z.string().min(3).max(20).default("1024×1024"),
         quality: z.string().min(3).max(20).default("High"),
         duration: z.string().min(2).max(20).default("10 ثانیه"),
+        fidelity: z.string().min(2).max(20).default("بالا"),
+        visualStyle: z.string().min(2).max(30).default("طبیعی"),
+        background: z.string().min(2).max(30).default("واقعی"),
+        renderDetail: z.string().min(2).max(30).default("متعادل"),
         originalImageUrl: z.string().min(1).max(2000).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -265,7 +269,7 @@ export const appRouter = router({
           : input.mode === "edit"
           ? `Edit the provided primary Manika reference image. Make the smallest possible change. Preserve her exact face and identity, hair identity, facial expression unless requested, anatomy, camera perspective, lighting direction and every non-requested element. Apply only this requested change: ${input.prompt}`
           : `Create a new photorealistic image using the attached primary Manika face reference. Identity fidelity is the highest priority: reproduce the same face, not a similar woman. Keep her exact facial features and hair identity; change only the requested scene, outfit, pose or lighting. Requested concept: ${input.prompt}`;
-        const outputSettings = `Output settings: aspect ratio ${input.aspectRatio}, pixel size ${input.size}, quality ${input.quality}, requested duration ${input.duration}. Treat these as explicit production constraints.`;
+        const outputSettings = `Output settings: aspect ratio ${input.aspectRatio}, pixel size ${input.size}, quality ${input.quality}, requested duration ${input.duration}, reference fidelity ${input.fidelity}, visual style ${input.visualStyle}, background ${input.background}, render detail ${input.renderDetail}. Treat these as explicit production constraints.`;
         const result = await generateImage({
           prompt: `${input.imageType === "general" ? instruction : `${instruction}\n${identity}\nThe attached reference image is the primary identity reference, not optional inspiration. Avoid: different person, changed face, changed eye color, changed nose, changed lips, changed jawline, changed facial proportions, changed hair identity, plastic skin, doll face, CGI, 3D render, anime, cartoon, distorted hands, extra fingers, fake eyes, artificial background, watermark, text.`}\n${outputSettings}`,
           ...(input.imageType === "manika" && input.originalImageUrl ? { originalImages: [{ url: input.originalImageUrl, mimeType: "image/png" as const }] } : {}),
