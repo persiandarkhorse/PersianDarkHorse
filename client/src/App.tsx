@@ -14,6 +14,7 @@ import FreeAPIs from "./pages/FreeAPIs";
 import Admin from "./pages/Admin";
 import Account from "./pages/Account";
 import CreationStudio from "./pages/CreationStudio";
+import Models from "./pages/Models";
 import { trpc } from "./lib/trpc";
 
 function HomeGate() {
@@ -56,6 +57,7 @@ function Router() {
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/api"} component={API} />
       <Route path={"/api/free"} component={FreeAPIs} />
+      <Route path={"/models"} component={Models} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/account"} component={Account} />
       <Route path={"/studio/video"}>{() => <CreationStudio kind="video" />}</Route>
