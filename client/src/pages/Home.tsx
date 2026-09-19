@@ -299,6 +299,18 @@ export default function Home() {
   }
 
   function selectCreationTool(toolId: string, provider: string) {
+    if (toolId === "video") {
+      setSkillsOpen(false);
+      setToolMenuOpen(null);
+      navigate(`/studio/video?provider=${encodeURIComponent(provider)}`);
+      return;
+    }
+    if (toolId === "image") {
+      setSkillsOpen(false);
+      setToolMenuOpen(null);
+      navigate(`/studio/image?provider=${encodeURIComponent(provider)}`);
+      return;
+    }
     setCreationSettings({ toolId, provider });
     if (toolId === "image") setImageEngine(provider);
     setToolMenuOpen(null);

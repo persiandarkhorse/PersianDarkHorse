@@ -13,6 +13,7 @@ import Legal from "./pages/Legal";
 import FreeAPIs from "./pages/FreeAPIs";
 import Admin from "./pages/Admin";
 import Account from "./pages/Account";
+import CreationStudio from "./pages/CreationStudio";
 import { trpc } from "./lib/trpc";
 
 function HomeGate() {
@@ -57,6 +58,8 @@ function Router() {
       <Route path={"/api/free"} component={FreeAPIs} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/account"} component={Account} />
+      <Route path={"/studio/video"}>{() => <CreationStudio kind="video" />}</Route>
+      <Route path={"/studio/image"}>{() => <CreationStudio kind="image" />}</Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
