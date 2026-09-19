@@ -1,0 +1,14 @@
+{
+  "name": "Persian Dark Horse — FEZI AI",
+  "short_name": "FEZI AI",
+  "description": "فضای چندایجنتی خلاق و حرفه‌ای Persian Dark Horse",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f4f0",
+  "theme_color": "#f7f4f0",
+  "orientation": "any",
+  "categories": ["productivity", "photo", "video", "business"]
+}
