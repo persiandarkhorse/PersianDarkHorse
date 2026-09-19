@@ -40,11 +40,11 @@ import {
 
 const officialPortrait = "/manus-storage/aab95790-b2a4-11f1-a3f1-ad16c1ab91b7_3b5f6e8a.png";
 const homeAgents = [
-  { id: "manika", name: "مانیکا", role: "خلاق و کارگردان", detail: "ایده‌پردازی، تصویر، استایل و محتوای خلاقانه.", image: officialPortrait },
-  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", detail: "حل مسئله، تحقیق، ساخت محصول و مدیریت پروژه.", image: "/manus-storage/fezi-reference_142ab3b4.png" },
-  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", detail: "کسب‌وکار، فروش، مارکتینگ، برندینگ و رشد.", image: "/manus-storage/arvin-reference_a9e918b0.png" },
-  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", detail: "معما، بازی، نقش‌آفرینی و داستان‌های تعاملی.", image: "/manus-storage/arta-reference_b28c18c8.png" },
-  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", detail: "کدنویسی، نمونهٔ اولیه، محصول و اتوماسیون.", image: "/manus-storage/negar-reference_6025582a.png" },
+  { id: "manika", name: "مانیکا", role: "خلاق و کارگردان", detail: "ایده‌پردازی، تصویر، استایل و محتوای خلاقانه.", menuHint: "استودیو خلاق برای تصویر، روایت و محتوای ماندگار.", skills: ["تصویر و ویرایش", "سناریو و پرامپت", "استایل و برند", "محتوای شبکه‌های اجتماعی"], image: officialPortrait },
+  { id: "fezi", name: "فضی", role: "رهبر و هماهنگ‌کنندهٔ ارشد", detail: "حل مسئله، تحقیق، ساخت محصول و مدیریت پروژه.", menuHint: "مرکز فرماندهی برای تبدیل مسئله‌های پیچیده به مسیر اجرایی.", skills: ["تحقیق و تحلیل", "حل مسئله", "ساخت محصول", "مدیریت پروژه"], image: "/manus-storage/fezi-reference_142ab3b4.png" },
+  { id: "arvin", name: "آروین", role: "استراتژیست پول و رشد", detail: "کسب‌وکار، فروش، مارکتینگ، برندینگ و رشد.", menuHint: "اتاق استراتژی برای رشد درآمد، فروش و جایگاه برند.", skills: ["مدل درآمدی", "فروش و قیف بازاریابی", "برندینگ و SEO", "تحلیل رقبا"], image: "/manus-storage/arvin-reference_a9e918b0.png" },
+  { id: "arta", name: "آرتا", role: "متخصص بازی و داستان تعاملی", detail: "معما، بازی، نقش‌آفرینی و داستان‌های تعاملی.", menuHint: "اتاق بازی برای معما، داستان‌های چندمسیره و سرگرمی مرموز.", skills: ["معما و کوییز", "داستان تعاملی", "نقش‌آفرینی", "بازی‌های کلامی"], image: "/manus-storage/arta-reference_b28c18c8.png" },
+  { id: "negar", name: "نگار", role: "مهندس نرم‌افزار و سازندهٔ محصول", detail: "کدنویسی، نمونهٔ اولیه، محصول و اتوماسیون.", menuHint: "کارگاه ساخت برای تبدیل ایده به کد، نمونهٔ اولیه و محصول.", skills: ["React و TypeScript", "API و دیتابیس", "اتوماسیون", "تست و دیباگ"], image: "/manus-storage/negar-reference_6025582a.png" },
 ];
 
 type Role = "user" | "assistant";
@@ -342,24 +342,26 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative h-11 w-11 overflow-hidden rounded-2xl bg-[#000000] ring-4 ring-white">
-                <img src={officialPortrait} alt="پرتره مانیکا" className="h-full w-full object-cover object-top" />
+                <img src={activeAgent.image} alt={`پرتره ${activeAgent.name}`} className="h-full w-full object-cover object-top" />
               </div>
               <div>
                 <p className="font-serif text-lg font-semibold tracking-tight">Persian Dark Horse</p>
-                <p className="text-[11px] text-[#666666]">FEZI AI · Manika</p>
+                <p className="text-[11px] text-[#666666]">FEZI AI · {activeAgent.name}</p>
+                <p className="mt-0.5 text-[10px] text-[#999999]">{activeAgent.role}</p>
               </div>
             </div>
             <button onClick={() => setMobileMenuOpen(false)} className="rounded-xl p-2 text-[#666666] hover:bg-white lg:hidden" aria-label="بستن منو"><X size={18} /></button>
           </div>
 
-          <Button onClick={() => { setMessages(initialMessages()); setInput(""); }} className="mt-8 h-12 w-full justify-between rounded-2xl bg-[#000000] px-4 text-sm font-medium text-white shadow-lg shadow-[#000000]/10 hover:bg-[#222222]">
+          <Button onClick={() => { setMessages(agentWelcome(activeAgent)); setInput(""); }} className="mt-8 h-12 w-full justify-between rounded-2xl bg-[#000000] px-4 text-sm font-medium text-white shadow-lg shadow-[#000000]/10 hover:bg-[#222222]">
             <span className="flex items-center gap-2"><Plus size={17} /> گفت‌وگوی تازه</span>
             <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px]">⌘ K</span>
           </Button>
 
           <div className="mt-4 rounded-2xl border border-[#dddddd] bg-white p-3">
-            <div className="flex items-center justify-between"><span className="text-[11px] font-semibold">موتور یکپارچه FEZI AI</span><span className="text-[10px] text-[#888888]">خودکار</span></div>
-            <p className="mt-2 text-[10px] leading-5 text-[#666666]">FEZI AI بهترین مسیر داخلی را برای هر درخواست انتخاب می‌کند؛ موتورهای پشتیبان برای شما یکپارچه و نامرئی هستند.</p>
+            <div className="flex items-center justify-between"><span className="text-[11px] font-semibold">فضای کاری {activeAgent.name}</span><span className="text-[10px] text-[#888888]">رایگان</span></div>
+            <p className="mt-2 text-[10px] leading-5 text-[#666666]">{activeAgent.menuHint}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">{activeAgent.skills.map((skill) => <span key={skill} className="rounded-full bg-[#f2f2f0] px-2 py-1 text-[9px] text-[#666]">{skill}</span>)}</div>
           </div>
 
           <div className="mt-9">
